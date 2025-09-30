@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
                 $kelas = Kelas::updateOrCreate([
                     'sekolah_id' => $sd->id,
                     'tingkat' => (string)$tingkat,
-                    'nama_kelas' => "Kelas {$tingkat}{$l}",
+                    'nama_kelas' => (string)$tingkat, // Nama kelas = angka 1–6
                     'lokal' => $l,
                 ]);
                 $kelasSDList[] = $kelas;
@@ -76,14 +76,12 @@ class DatabaseSeeder extends Seeder
             'nama_siswa' => 'Siswa TK Umum',
         ]);
 
-        // 1 siswa per kelas SD (ambil kelas 1A, 2A, 3A,... 6A)
+        // 1 siswa per kelas SD (ambil semua lokal A/B/C)
         foreach ($kelasSDList as $kelas) {
-            if (in_array($kelas->lokal, ['A'])) {
-                $siswaList[] = Siswa::updateOrCreate([
-                    'kelas_id' => $kelas->id,
-                    'nama_siswa' => "Siswa SD {$kelas->nama_kelas}",
-                ]);
-            }
+            $siswaList[] = Siswa::updateOrCreate([
+                'kelas_id' => $kelas->id,
+                'nama_siswa' => "Siswa SD {$kelas->tingkat}{$kelas->lokal}",
+            ]);
         }
 
         // === TAGIHAN & PEMBAYARAN DEMO ===

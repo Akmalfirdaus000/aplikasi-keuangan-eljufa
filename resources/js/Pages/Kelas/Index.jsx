@@ -1,157 +1,412 @@
-// import { useState } from "react";
-// import { useForm, usePage, router } from "@inertiajs/react";
-// import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-// import Modal from "@/Components/UI/Modal";
+"use client"
 
-// export default function Index() {
-//     const { kelasList, sekolahList } = usePage().props;
+import { useMemo, useState, useEffect } from "react"
+import { useForm, usePage, router } from "@inertiajs/react"
 
-//     const [createOpen, setCreateOpen] = useState(false);
-//     const [editOpen, setEditOpen] = useState(false);
-//     const [editKelas, setEditKelas] = useState(null);
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 
-//     const createForm = useForm({ sekolah_id: "", tingkat: "", nama_kelas: "", lokal: "" });
-//     const editForm = useForm({ id: "", sekolah_id: "", tingkat: "", nama_kelas: "", lokal: "" });
+const TINGKAT_OPTIONS = ["TK", "1", "2", "3", "4", "5", "6"]
 
-//     const tingkatOptions = ["TK", "1", "2", "3", "4", "5", "6"];
-//     const lokalOptions = ["A", "B", "C", "Umum"];
+export default function KelasIndex() {
+  const { kelasList, sekolahList } = usePage().props
 
-//     const submitCreate = (e) => {
-//         e.preventDefault();
-//         router.post(route("kelas.store"), createForm.data, {
-//             onSuccess: () => {
-//                 setCreateOpen(false);
-//                 createForm.reset();
-//             },
-//         });
-//     };
+  // Toolbar state
+  const [q, setQ] = useState("")
+  const [sekolahId, setSekolahId] = useState("")
+  const [tingkat, setTingkat] = useState("")
+  const [lokal, setLokal] = useState("")
 
-//     const openEdit = (kelas) => {
-//         setEditKelas(kelas);
-//         editForm.setData({
-//             id: kelas.id,
-//             sekolah_id: kelas.sekolah.id,
-//             tingkat: kelas.tingkat,
-//             nama_kelas: kelas.nama_kelas,
-//             lokal: kelas.lokal,
-//         });
-//         setEditOpen(true);
-//     };
+  const resetFilters = () => {
+    setQ("")
+    setSekolahId("")
+    setTingkat("")
+    setLokal("")
+  }
 
-//     const submitEdit = (e) => {
-//         e.preventDefault();
-//         router.put(route("kelas.update", editForm.data.id), editForm.data, {
-//             onSuccess: () => setEditOpen(false),
-//         });
-//     };
+  const lokalOptionsByTingkat = useMemo(() => {
+    if (tingkat === "TK") return ["Umum"]
+    if (!tingkat) return ["A", "B", "C", "Umum"]
+    return ["A", "B", "C"]
+  }, [tingkat])
 
-//  const handleDelete = (id) => {
-//         if (!confirm("Yakin ingin menghapus kelas ini?")) return;
+  const filteredKelas = useMemo(() => {
+    let rows = kelasList || []
+    if (sekolahId) rows = rows.filter((r) => r.sekolah.id === Number.parseInt(sekolahId))
+    if (tingkat) rows = rows.filter((r) => r.tingkat === tingkat)
+    if (lokal) rows = rows.filter((r) => r.lokal === lokal)
+    if (q.trim()) {
+      const term = q.toLowerCase()
+      rows = rows.filter(
+        (r) =>
+          r.nama_kelas.toLowerCase().includes(term) ||
+          (r.sekolah?.nama_sekolah || "").toLowerCase().includes(term) ||
+          r.tingkat.toLowerCase().includes(term) ||
+          r.lokal.toLowerCase().includes(term),
+      )
+    }
+    return rows
+  }, [kelasList, sekolahId, tingkat, lokal, q])
 
-//         router.delete(route("kelas.destroy", id), {
-//             onSuccess: () => {
-//                 // Hapus kelas dari state supaya tabel otomatis update
-//                 setKelasData((prev) => prev.filter((k) => k.id !== id));
-//             },
-//             onError: (errors) => console.error(errors),
-//         });
-//     };
+  // 🔥 Grouping: Sekolah > Tingkat > Lokal
+  const groupedKelas = useMemo(() => {
+    const result = {}
+    filteredKelas.forEach((k) => {
+      if (!result[k.sekolah.id]) {
+        result[k.sekolah.id] = {
+          sekolah: k.sekolah,
+          tingkat: {},
+        }
+      }
+      if (!result[k.sekolah.id].tingkat[k.tingkat]) {
+        result[k.sekolah.id].tingkat[k.tingkat] = {}
+      }
+      if (!result[k.sekolah.id].tingkat[k.tingkat][k.lokal]) {
+        result[k.sekolah.id].tingkat[k.tingkat][k.lokal] = []
+      }
+      result[k.sekolah.id].tingkat[k.tingkat][k.lokal].push(k)
+    })
+    return result
+  }, [filteredKelas])
 
-//     return (
-//         <AuthenticatedLayout header={<h1 className="text-xl font-bold">Master Data Kelas</h1>}>
-//             <div className="mb-4 flex justify-end">
-//                 <button
-//                     onClick={() => setCreateOpen(true)}
-//                     className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-//                 >
-//                     Tambah Kelas
-//                 </button>
-//             </div>
+  // === Create/Edit forms
+  const [openCreate, setOpenCreate] = useState(false)
+  const [openEdit, setOpenEdit] = useState(false)
+  const [editing, setEditing] = useState(null)
 
-//             <div className="bg-white shadow rounded-md overflow-hidden">
-//                 <table className="min-w-full divide-y divide-gray-200">
-//                     <thead className="bg-gray-50">
-//                         <tr>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sekolah</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tingkat</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Kelas</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lokal</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-//                         </tr>
-//                     </thead>
-//                     <tbody className="bg-white divide-y divide-gray-200">
-//                         {kelasList.map((kelas, index) => (
-//                             <tr key={kelas.id}>
-//                                 <td className="px-6 py-4">{index + 1}</td>
-//                                 <td className="px-6 py-4">{kelas.sekolah.nama_sekolah}</td>
-//                                 <td className="px-6 py-4">{kelas.tingkat}</td>
-//                                 <td className="px-6 py-4">{kelas.nama_kelas}</td>
-//                                 <td className="px-6 py-4">{kelas.lokal}</td>
-//                                 <td className="px-6 py-4 space-x-2">
-//                                     <button onClick={() => openEdit(kelas)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-//                                     <button
-//                                         onClick={() => handleDelete(kelas.id)}
-//                                         className="text-red-600 hover:text-red-900"
-//                                     >
-//                                         Hapus
-//                                     </button>
-//                                 </td>
-//                             </tr>
-//                         ))}
-//                     </tbody>
-//                 </table>
-//             </div>
+  const createForm = useForm({ sekolah_id: "", tingkat: "", nama_kelas: "", lokal: "" })
+  const editForm = useForm({ id: "", sekolah_id: "", tingkat: "", nama_kelas: "", lokal: "" })
 
-//             {/* Modal Create */}
-//             <Modal open={createOpen} setOpen={setCreateOpen} title="Tambah Kelas">
-//                 <form onSubmit={submitCreate} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-//                     <select value={createForm.data.sekolah_id} onChange={e => createForm.setData("sekolah_id", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                         <option value="">Pilih Sekolah</option>
-//                         {sekolahList.map(s => <option key={s.id} value={s.id}>{s.nama_sekolah}</option>)}
-//                     </select>
+  const [lokalCreateOpts, setLokalCreateOpts] = useState([])
+  const [lokalEditOpts, setLokalEditOpts] = useState([])
 
-//                     <select value={createForm.data.tingkat} onChange={e => createForm.setData("tingkat", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                         <option value="">Pilih Tingkat</option>
-//                         {tingkatOptions.map(t => <option key={t} value={t}>{t}</option>)}
-//                     </select>
+  useEffect(() => {
+    if (createForm.data.tingkat === "TK") {
+      setLokalCreateOpts(["Umum"])
+      createForm.setData("lokal", "Umum")
+    } else if (createForm.data.tingkat) {
+      setLokalCreateOpts(["A", "B", "C"])
+      if (!["A", "B", "C"].includes(createForm.data.lokal)) createForm.setData("lokal", "")
+    } else {
+      setLokalCreateOpts([])
+      createForm.setData("lokal", "")
+    }
+  }, [createForm.data.tingkat])
 
-//                     <input type="text" placeholder="Nama Kelas" value={createForm.data.nama_kelas} onChange={e => createForm.setData("nama_kelas", e.target.value)} className="w-full border px-3 py-2 rounded-md" />
+  useEffect(() => {
+    if (editForm.data.tingkat === "TK") {
+      setLokalEditOpts(["Umum"])
+      editForm.setData("lokal", "Umum")
+    } else if (editForm.data.tingkat) {
+      setLokalEditOpts(["A", "B", "C"])
+      if (!["A", "B", "C"].includes(editForm.data.lokal)) editForm.setData("lokal", "")
+    } else {
+      setLokalEditOpts([])
+      editForm.setData("lokal", "")
+    }
+  }, [editForm.data.tingkat])
 
-//                     <select value={createForm.data.lokal} onChange={e => createForm.setData("lokal", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                         <option value="">Pilih Lokal</option>
-//                         {lokalOptions.map(l => <option key={l} value={l}>{l}</option>)}
-//                     </select>
+  const onCreate = (e) => {
+    e.preventDefault()
+    router.post("/kelas", createForm.data, {
+      onSuccess: () => {
+        setOpenCreate(false)
+        createForm.reset()
+      },
+    })
+  }
 
-//                     <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 col-span-full" disabled={createForm.processing}>Simpan</button>
-//                 </form>
-//             </Modal>
+  const openEditDialog = (k) => {
+    setEditing(k)
+    editForm.setData({
+      id: k.id,
+      sekolah_id: String(k.sekolah.id),
+      tingkat: k.tingkat,
+      nama_kelas: k.nama_kelas,
+      lokal: k.lokal,
+    })
+    setOpenEdit(true)
+  }
 
-//             {/* Modal Edit */}
-//             {editKelas && (
-//                 <Modal open={editOpen} setOpen={setEditOpen} title="Edit Kelas">
-//                     <form onSubmit={submitEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-//                         <select value={editForm.data.sekolah_id} onChange={e => editForm.setData("sekolah_id", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                             <option value="">Pilih Sekolah</option>
-//                             {sekolahList.map(s => <option key={s.id} value={s.id}>{s.nama_sekolah}</option>)}
-//                         </select>
+  const onEdit = (e) => {
+    e.preventDefault()
+    router.put(`/kelas/${editForm.data.id}`, editForm.data, {
+      onSuccess: () => setOpenEdit(false),
+    })
+  }
 
-//                         <select value={editForm.data.tingkat} onChange={e => editForm.setData("tingkat", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                             <option value="">Pilih Tingkat</option>
-//                             {tingkatOptions.map(t => <option key={t} value={t}>{t}</option>)}
-//                         </select>
+   const onDelete = (id) => {
+     if (!confirm("Yakin ingin menghapus sekolah ini?")) return
+     router.delete(route("kelas.destroy", id))
+   }
 
-//                         <input type="text" value={editForm.data.nama_kelas} onChange={e => editForm.setData("nama_kelas", e.target.value)} className="w-full border px-3 py-2 rounded-md" />
+  const lihatSiswa = (k) => {
+    router.get(`/siswas?kelas_id=${k.id}`)
+  }
 
-//                         <select value={editForm.data.lokal} onChange={e => editForm.setData("lokal", e.target.value)} className="w-full border px-3 py-2 rounded-md">
-//                             <option value="">Pilih Lokal</option>
-//                             {lokalOptions.map(l => <option key={l} value={l}>{l}</option>)}
-//                         </select>
+  return (
+    <AuthenticatedLayout>
+      <main className="p-4 md:p-6">
+        <Card>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <CardTitle>Master Data Kelas</CardTitle>
+              <Button onClick={() => setOpenCreate(true)}>Tambah Kelas</Button>
+            </div>
+            {/* Toolbar filters */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <Input placeholder="Cari ..." value={q} onChange={(e) => setQ(e.target.value)} />
+              <Select value={sekolahId} onValueChange={setSekolahId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Sekolah" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(sekolahList || []).map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.nama_sekolah}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={tingkat} onValueChange={setTingkat}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Tingkat" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TINGKAT_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={lokal} onValueChange={setLokal} disabled={!lokalOptionsByTingkat.length}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Lokal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lokalOptionsByTingkat.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={resetFilters}>
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
 
-//                         <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 col-span-full" disabled={editForm.processing}>Update</button>
-//                     </form>
-//                 </Modal>
-//             )}
-//         </AuthenticatedLayout>
-//     );
-// }
+          {/* 🔥 Grouped Table */}
+          <CardContent className="overflow-x-auto">
+            {Object.values(groupedKelas).map((sGroup, sIdx) => (
+              <div key={sGroup.sekolah.id} className="mb-6">
+                <h2 className="font-bold text-lg mb-2">
+                  {sIdx + 1}. {sGroup.sekolah.nama_sekolah}
+                </h2>
+                {Object.keys(sGroup.tingkat).map((t) => (
+                  <div key={t} className="ml-4 mb-4">
+                    <h3 className="font-semibold">Kelas {t}</h3>
+                    {Object.keys(sGroup.tingkat[t]).map((l) => (
+                      <div key={l} className="ml-6 mb-2">
+                        <h4 className="font-medium">Lokal {l}</h4>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>#</TableHead>
+                              <TableHead>Nama Kelas</TableHead>
+                              <TableHead>Aksi</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sGroup.tingkat[t][l].map((k, idx) => (
+                              <TableRow key={k.id}>
+                                <TableCell>{idx + 1}</TableCell>
+                                <TableCell>{k.nama_kelas}</TableCell>
+                                <TableCell className="space-x-2">
+                                  <Button size="sm" variant="secondary" onClick={() => lihatSiswa(k)}>
+                                    Lihat Siswa
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => openEditDialog(k)}>
+                                    Edit
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => onDelete(k.id)}>
+                                    Hapus
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* === Create Dialog === */}
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Kelas</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={onCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Sekolah</Label>
+                <Select value={createForm.data.sekolah_id} onValueChange={(v) => createForm.setData("sekolah_id", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Sekolah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sekolahList.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.nama_sekolah}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Tingkat</Label>
+                <Select value={createForm.data.tingkat} onValueChange={(v) => createForm.setData("tingkat", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Tingkat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TINGKAT_OPTIONS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Nama Kelas</Label>
+                <Input
+                  placeholder="Nama Kelas"
+                  value={createForm.data.nama_kelas}
+                  onChange={(e) => createForm.setData("nama_kelas", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Lokal</Label>
+                <Select
+                  value={createForm.data.lokal}
+                  onValueChange={(v) => createForm.setData("lokal", v)}
+                  disabled={!createForm.data.tingkat}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Lokal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lokalCreateOpts.map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={createForm.processing}>
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* === Edit Dialog === */}
+        <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Kelas</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={onEdit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Sekolah</Label>
+                <Select value={editForm.data.sekolah_id} onValueChange={(v) => editForm.setData("sekolah_id", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Sekolah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sekolahList.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.nama_sekolah}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Tingkat</Label>
+                <Select value={editForm.data.tingkat} onValueChange={(v) => editForm.setData("tingkat", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Tingkat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TINGKAT_OPTIONS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Nama Kelas</Label>
+                <Input
+                  value={editForm.data.nama_kelas}
+                  onChange={(e) => editForm.setData("nama_kelas", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Lokal</Label>
+                <Select
+                  value={editForm.data.lokal}
+                  onValueChange={(v) => editForm.setData("lokal", v)}
+                  disabled={!editForm.data.tingkat}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Lokal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lokalEditOpts.map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={editForm.processing}>
+                  Update
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </AuthenticatedLayout>
+  )
+}

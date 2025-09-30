@@ -49,6 +49,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('kategoris', KategoriController::class);
 
     // Transaksi
+    Route::get('/tagihan/tk', [TagihanController::class, 'indexTK'])->name('tagihans.tk');
+Route::get('/tagihan/sd', [TagihanController::class, 'indexSD'])->name('tagihans.sd');
+
     Route::resource('tagihans', TagihanController::class);
     Route::resource('pembayarans', PembayaranController::class);
 });

@@ -9,18 +9,19 @@ use Inertia\Inertia;
 
 class TagihanController extends Controller
 {
-    public function index()
-    {
-        $tagihans = Tagihan::with(['siswa.kelas.sekolah', 'kategori'])->get();
-        $siswaList = Siswa::with('kelas.sekolah')->get();
-        $kategoriList = Kategori::all();
+ public function index()
+{
+    $tagihans = Tagihan::with(['siswa.kelas.sekolah', 'kategori'])->get();
+    $siswas = Siswa::with('kelas.sekolah')->get(); // key harus 'siswas'
+    $kategoris = Kategori::all(); // key harus 'kategoris'
 
-        return Inertia::render('Tagihan/Index', [
-            'tagihans' => $tagihans,
-            'siswaList' => $siswaList,
-            'kategoriList' => $kategoriList,
-        ]);
-    }
+    return Inertia::render('Tagihan/Index', [
+        'tagihans' => $tagihans,
+        'siswas' => $siswas,
+        'kategoris' => $kategoris,
+    ]);
+}
+
 
     public function store(Request $request)
     {

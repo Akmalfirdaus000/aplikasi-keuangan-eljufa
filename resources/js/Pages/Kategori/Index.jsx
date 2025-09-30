@@ -1,132 +1,151 @@
-// import { useState } from "react";
-// import { usePage, router, useForm } from "@inertiajs/react";
-// import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-// import Modal from "@/Components/UI/Modal";
+"use client"
 
-// export default function Index() {
-//     const { kategoriList } = usePage().props;
-//     const [kategoriData, setKategoriData] = useState(kategoriList);
-//     const [createOpen, setCreateOpen] = useState(false);
-//     const [editOpen, setEditOpen] = useState(false);
-//     const [editKategori, setEditKategori] = useState(null);
+import { useState } from "react"
+import { useForm, usePage, router } from "@inertiajs/react"
+import { route } from "ziggy-js" // <-- pastikan ziggy-js sudah terpasang dan dikonfigurasi
 
-//     const createForm = useForm({ nama_kategori: "" });
-//     const editForm = useForm({ id: "", nama_kategori: "" });
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 
-//     const submitCreate = (e) => {
-//         e.preventDefault();
-//         router.post(route("kategori.store"), createForm.data, {
-//             onSuccess: () => {
-//                 setCreateOpen(false);
-//                 createForm.reset();
-//             },
-//         });
-//     };
+export default function KategoriIndex() {
+  const { kategoriList } = usePage().props
+  const [data, setData] = useState(kategoriList || [])
+  const [openCreate, setOpenCreate] = useState(false)
+  const [openEdit, setOpenEdit] = useState(false)
+  const [editing, setEditing] = useState(null)
 
-//     const openEdit = (kategori) => {
-//         setEditKategori(kategori);
-//         editForm.setData({ id: kategori.id, nama_kategori: kategori.nama_kategori });
-//         setEditOpen(true);
-//     };
+  const createForm = useForm({ nama_kategori: "" })
+  const editForm = useForm({ id: "", nama_kategori: "" })
 
-//     const submitEdit = (e) => {
-//         e.preventDefault();
-//         router.put(route("kategori.update", editForm.data.id), editForm.data, {
-//             onSuccess: () => setEditOpen(false),
-//         });
-//     };
+  // === CREATE ===
+  const onCreate = (e) => {
+    e.preventDefault()
+    router.post(route("kategori.store"), createForm.data, {
+      onSuccess: () => {
+        setOpenCreate(false)
+        createForm.reset()
+      },
+    })
+  }
 
-//     const handleDelete = (id) => {
-//         if (!confirm("Yakin ingin menghapus kategori ini?")) return;
+  // === OPEN EDIT DIALOG ===
+  const openEditDialog = (kategori) => {
+    setEditing(kategori)
+    editForm.setData({ id: kategori.id, nama_kategori: kategori.nama_kategori })
+    setOpenEdit(true)
+  }
 
-//         router.delete(route("kategori.destroy", id), {
-//             onSuccess: () => setKategoriData((prev) => prev.filter((k) => k.id !== id)),
-//         });
-//     };
+  // === UPDATE ===
+  const onEdit = (e) => {
+    e.preventDefault()
+    router.put(route("kategori.update", editForm.data.id), editForm.data, {
+      onSuccess: () => setOpenEdit(false),
+    })
+  }
 
-//     return (
-//         <AuthenticatedLayout header={<h1 className="text-xl font-bold">Master Data Kategori</h1>}>
-//             <div className="mb-4 flex justify-end">
-//                 <button
-//                     onClick={() => setCreateOpen(true)}
-//                     className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-//                 >
-//                     Tambah Kategori
-//                 </button>
-//             </div>
+  // === DELETE ===
+  const onDelete = (id) => {
+    if (!confirm("Yakin ingin menghapus kategori ini?")) return
+    router.delete(route("kategori.destroy", id), {
+      onSuccess: () => setData((prev) => prev.filter((k) => k.id !== id)),
+    })
+  }
 
-//             <div className="bg-white shadow rounded-md overflow-hidden">
-//                 <table className="min-w-full divide-y divide-gray-200">
-//                     <thead className="bg-gray-50">
-//                         <tr>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-//                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-//                         </tr>
-//                     </thead>
-//                     <tbody className="bg-white divide-y divide-gray-200">
-//                         {kategoriData.map((kategori, index) => (
-//                             <tr key={kategori.id}>
-//                                 <td className="px-6 py-4">{index + 1}</td>
-//                                 <td className="px-6 py-4">{kategori.nama_kategori}</td>
-//                                 <td className="px-6 py-4 space-x-2">
-//                                     <button
-//                                         onClick={() => openEdit(kategori)}
-//                                         className="text-indigo-600 hover:text-indigo-900"
-//                                     >
-//                                         Edit
-//                                     </button>
-//                                     <button
-//                                         onClick={() => handleDelete(kategori.id)}
-//                                         className="text-red-600 hover:text-red-900"
-//                                     >
-//                                         Hapus
-//                                     </button>
-//                                 </td>
-//                             </tr>
-//                         ))}
-//                     </tbody>
-//                 </table>
-//             </div>
+  return (
+    
+    <AuthenticatedLayout>
+      <main className="p-4 md:p-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Master Data Kategori</CardTitle>
+            <Button onClick={() => setOpenCreate(true)}>Tambah Kategori</Button>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data?.map((k, idx) => (
+                  <TableRow key={k.id}>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell className="font-medium">{k.nama_kategori}</TableCell>
+                    <TableCell className="space-x-2">
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(k)}>
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => onDelete(k.id)}>
+                        Hapus
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-//             {/* Modal Tambah */}
-//             <Modal open={createOpen} setOpen={setCreateOpen} title="Tambah Kategori">
-//                 <form onSubmit={submitCreate} className="space-y-2">
-//                     <input
-//                         type="text"
-//                         placeholder="Nama Kategori"
-//                         value={createForm.data.nama_kategori}
-//                         onChange={(e) => createForm.setData("nama_kategori", e.target.value)}
-//                         className="w-full border px-3 py-2 rounded-md"
-//                     />
-//                     {createForm.errors.nama_kategori && (
-//                         <div className="text-red-600 text-sm">{createForm.errors.nama_kategori}</div>
-//                     )}
-//                     <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-//                         Simpan
-//                     </button>
-//                 </form>
-//             </Modal>
+        {/* Create Dialog */}
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Kategori</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={onCreate} className="space-y-3">
+              <Input
+                placeholder="Nama Kategori"
+                value={createForm.data.nama_kategori}
+                onChange={(e) => createForm.setData("nama_kategori", e.target.value)}
+              />
+              {createForm.errors.nama_kategori && (
+                <div className="text-sm text-red-600">{createForm.errors.nama_kategori}</div>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={createForm.processing}>
+                  Simpan
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-//             {/* Modal Edit */}
-//             {editKategori && (
-//                 <Modal open={editOpen} setOpen={setEditOpen} title="Edit Kategori">
-//                     <form onSubmit={submitEdit} className="space-y-2">
-//                         <input
-//                             type="text"
-//                             value={editForm.data.nama_kategori}
-//                             onChange={(e) => editForm.setData("nama_kategori", e.target.value)}
-//                             className="w-full border px-3 py-2 rounded-md"
-//                         />
-//                         {editForm.errors.nama_kategori && (
-//                             <div className="text-red-600 text-sm">{editForm.errors.nama_kategori}</div>
-//                         )}
-//                         <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-//                             Update
-//                         </button>
-//                     </form>
-//                 </Modal>
-//             )}
-//         </AuthenticatedLayout>
-//     );
-// }
+        {/* Edit Dialog */}
+        <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Kategori</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={onEdit} className="space-y-3">
+              <Input
+                value={editForm.data.nama_kategori}
+                onChange={(e) => editForm.setData("nama_kategori", e.target.value)}
+              />
+              {editForm.errors.nama_kategori && (
+                <div className="text-sm text-red-600">{editForm.errors.nama_kategori}</div>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={editForm.processing}>
+                  Update
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </AuthenticatedLayout>
+  )
+}
