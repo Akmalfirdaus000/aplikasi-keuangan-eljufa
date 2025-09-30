@@ -122,6 +122,10 @@ export default function Index() {
     })
     setOpenModal(true)
   }
+  const handleDetail = (siswaId) => {
+    if (!siswaId) return
+    console.log("[v0] Klik Detail untuk siswa id:", siswaId)
+  }
 
   // Data per siswa dengan map tagihan per kategori (key: kategori.id)
   const siswaData = useMemo(() => {
@@ -476,6 +480,9 @@ export default function Index() {
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" onClick={() => handleQuickAdd(siswa.id, displayedKategoris[0]?.id || "")}>
                             Tambah Cepat
+                          </Button>
+                          <Button size="sm" onClick={() => handleDetail(siswa.id)}>
+                            Detail
                           </Button>
                         </div>
                       </TableCell>
