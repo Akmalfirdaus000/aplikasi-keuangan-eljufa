@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\Sekolah;
+use App\Models\Kategori;
 use Illuminate\Http\Request;
 
 class SiswaController extends Controller
@@ -54,25 +55,69 @@ class SiswaController extends Controller
     }
 
     // Update siswa
-    public function update(Request $request, Siswa $siswa)
+  public function update(Request $request, $id)
     {
         $request->validate([
             'nama_siswa' => 'required|string|max:255',
             'kelas_id' => 'required|exists:kelas,id',
         ]);
 
+        $siswa = Siswa::findOrFail($id);
+
         $siswa->update([
             'nama_siswa' => $request->nama_siswa,
             'kelas_id' => $request->kelas_id,
         ]);
 
-        return redirect()->route('siswas.index')->with('success', 'Siswa berhasil diupdate');
+        return redirect()->route('siswas.index')
+            ->with('success', 'Siswa berhasil diperbarui');
     }
 
-    // Hapus siswa
-    public function destroy(Siswa $siswa)
+    // Hapus Siswa
+    public function destroy($id)
     {
-        $siswa->delete();
-        return redirect()->route('siswas.index')->with('success', 'Siswa berhasil dihapus');
+        try {
+            $siswa = Siswa::findOrFail($id);
+            $siswa->delete();
+
+            return redirect()->route('siswas.index')
+                ->with('success', 'Siswa berhasil dihapus');
+        } catch (\Exception $e) {
+            return redirect()->route('siswas.index')
+                ->with('error', 'Gagal menghapus siswa: ' . $e->getMessage());
+        }
     }
+public function show($id)
+{
+    $siswa = Siswa::with([
+        'kelas',
+        'tagihans.kategori',
+        'tagihans.pembayarans', // ambil semua pembayaran dari setiap tagihan
+    ])->findOrFail($id);
+
+    // Hitung tunggakan
+    $totalTunggakan = $siswa->tagihans
+        ->where('status', 'belum_lunas')
+        ->sum('sisa_tagihan');
+
+    // Kumpulkan semua pembayaran dari setiap tagihan
+    $pembayarans = $siswa->tagihans
+        ->flatMap(function ($tagihan) {
+            return $tagihan->pembayarans;
+        });
+
+    // Hitung total pembayaran
+    $totalPembayaran = $pembayarans->sum('nominal');
+
+    return Inertia::render('Siswa/Show', [
+        'siswa' => $siswa,
+        'totalTunggakan' => $totalTunggakan,
+        'totalPembayaran' => $totalPembayaran,
+        'pembayarans' => $pembayarans, // biar bisa ditampilkan di frontend
+    ]);
+}
+
+
+
+
 }

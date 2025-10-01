@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm, usePage, router } from "@inertiajs/react"
 import { route } from "ziggy-js"
+import { useToast } from "@/hooks/use-toast" // ✅ pakai dari hooks
 
 // shadcn/ui
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -13,7 +14,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 
 export default function SekolahIndex() {
-  const { sekolahs, csrf_token } = usePage().props
+  const { sekolahs } = usePage().props
+  const { toast } = useToast() // ✅ init toast
 
   const [openCreate, setOpenCreate] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
@@ -22,33 +24,54 @@ export default function SekolahIndex() {
   const createForm = useForm({ nama_sekolah: "" })
   const editForm = useForm({ id: "", nama_sekolah: "" })
 
-  const onCreate = (e) => {
-    e.preventDefault()
-    createForm.post(route("sekolahs.store"), {
-      onSuccess: () => {
-        setOpenCreate(false)
-        createForm.reset()
-      },
-    })
-  }
+  // Tambah sekolah
+// Tambah sekolah
+const onCreate = (e) => {
+  e.preventDefault()
+  createForm.post(route("sekolahs.store"), {
+    onSuccess: () => {
+      setOpenCreate(false)
+      createForm.reset()
+      toast({ title: "Berhasil", description: "Sekolah berhasil ditambahkan" })
+    },
+    onError: () => {
+      toast({ title: "Gagal", description: "Tidak bisa menambahkan sekolah", variant: "destructive" })
+    },
+  })
+}
 
+// Edit sekolah
+const onEdit = (e) => {
+  e.preventDefault()
+  editForm.put(route("sekolahs.update", editForm.data.id), {
+    onSuccess: () => {
+      setOpenEdit(false)
+      toast({ title: "Berhasil", description: "Sekolah berhasil diupdate" })
+    },
+    onError: () => {
+      toast({ title: "Gagal", description: "Tidak bisa mengupdate sekolah", variant: "destructive" })
+    },
+  })
+}
+
+// Hapus sekolah
+const onDelete = (id) => {
+  if (!confirm("Yakin ingin menghapus sekolah ini?")) return
+  router.delete(route("sekolahs.destroy", id), {
+    onSuccess: () => toast({ title: "Terhapus", description: "Sekolah berhasil dihapus", variant: "destructive" }),
+    onError: () => toast({ title: "Gagal", description: "Tidak bisa menghapus sekolah", variant: "destructive" }),
+  })
+}
+
+
+  // Buka dialog edit
   const openEditDialog = (sekolah) => {
     setEditing(sekolah)
     editForm.setData({ id: sekolah.id, nama_sekolah: sekolah.nama_sekolah })
     setOpenEdit(true)
   }
 
-  const onEdit = (e) => {
-    e.preventDefault()
-    editForm.put(route("sekolahs.update", editForm.data.id), {
-      onSuccess: () => setOpenEdit(false),
-    })
-  }
 
-  const onDelete = (id) => {
-    if (!confirm("Yakin ingin menghapus sekolah ini?")) return
-    router.delete(route("sekolahs.destroy", id))
-  }
 
   return (
     <AuthenticatedLayout className="p-4 md:p-6">

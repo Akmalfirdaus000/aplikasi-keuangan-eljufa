@@ -1,9 +1,10 @@
-import { usePage } from "@inertiajs/react";
-import Sidebar from "@/Components/Sidebar";
+import { usePage } from "@inertiajs/react"
+import Sidebar from "@/Components/Sidebar"
+import { Toaster } from "@/components/ui/toaster" // ✅ Import Toaster
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { auth } = usePage().props;
-    const user = auth?.user ?? { name: "Guest" };
+    const { auth } = usePage().props
+    const user = auth?.user ?? { name: "Guest" }
 
     return (
         <div className="flex min-h-screen bg-gray-100">
@@ -29,6 +30,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     {children}
                 </main>
             </div>
+
+            {/* ✅ Toaster harus ada di root layout */}
+            <Toaster />
         </div>
-    );
+    )
 }

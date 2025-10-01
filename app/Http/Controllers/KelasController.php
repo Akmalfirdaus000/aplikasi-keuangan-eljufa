@@ -52,30 +52,44 @@ class KelasController extends Controller
     }
 
     // Update kelas
-    public function update(Request $request, Kelas $kelas)
-    {
-        $request->validate([
-            'sekolah_id' => 'required|exists:sekolahs,id',
-            'tingkat' => 'required|string',
-            'nama_kelas' => 'required|string|max:255',
-            'lokal' => 'required|string',
-        ]);
+  // Update kelas
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'sekolah_id' => 'required|exists:sekolahs,id',
+        'tingkat' => 'required|string',
+        'nama_kelas' => 'required|string|max:255',
+        'lokal' => 'required|string',
+    ]);
 
-        $kelas->update([
-            'sekolah_id' => $request->sekolah_id,
-            'tingkat' => $request->tingkat,
-            'nama_kelas' => $request->nama_kelas,
-            'lokal' => $request->lokal,
-        ]);
+    $kelas = Kelas::findOrFail($id);
 
-        return redirect()->route('kelas.index')->with('success', 'Kelas berhasil diperbarui');
-    }
+    $kelas->update([
+        'sekolah_id' => $request->sekolah_id,
+        'tingkat' => $request->tingkat,
+        'nama_kelas' => $request->nama_kelas,
+        'lokal' => $request->lokal,
+    ]);
+
+    return redirect()->route('kelas.index')->with('success', 'Kelas berhasil diperbarui');
+}
+
 
     // Hapus kelas
-    public function destroy(Kelas $kelas)
+public function destroy($id)
 {
-    $kelas->delete();
-    return redirect()->route('kelas.index')->with('success', 'Kelas berhasil dihapus');
+    try {
+        $kelas = Kelas::findOrFail($id);
+        $kelas->delete();
+
+        return redirect()->route('kelas.index')
+            ->with('success', 'Kelas berhasil dihapus');
+    } catch (\Exception $e) {
+        return redirect()->route('kelas.index')
+            ->with('error', 'Gagal menghapus kelas: ' . $e->getMessage());
+    }
 }
+
+
 
 }

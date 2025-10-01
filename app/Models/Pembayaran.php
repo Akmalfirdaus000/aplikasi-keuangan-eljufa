@@ -10,6 +10,9 @@ class Pembayaran extends Model
     use HasFactory;
 
     protected $fillable = ['tagihan_id', 'tanggal_bayar', 'nominal', 'metode', 'keterangan'];
+       protected $attributes = [
+        'metode' => 'Tunai',
+    ];
 
     // Relasi: Pembayaran milik tagihan
     public function tagihan()

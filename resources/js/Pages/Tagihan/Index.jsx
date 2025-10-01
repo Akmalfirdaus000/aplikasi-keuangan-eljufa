@@ -124,7 +124,7 @@ export default function Index() {
   }
   const handleDetail = (siswaId) => {
     if (!siswaId) return
-    console.log("[v0] Klik Detail untuk siswa id:", siswaId)
+    router.visit(route("siswa.show", siswaId))
   }
 
   // Data per siswa dengan map tagihan per kategori (key: kategori.id)

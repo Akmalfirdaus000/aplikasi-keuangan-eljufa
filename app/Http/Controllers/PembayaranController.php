@@ -5,114 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\Pembayaran;
 use App\Models\Tagihan;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class PembayaranController extends Controller
 {
-
-
-    // INDEX
-    public function index()
+    public function store(Request $request)
     {
-        // Ambil semua pembayaran beserta relasi yang dibutuhkan
-        $pembayarans = Pembayaran::with([
-            'tagihan.siswa.kelas.sekolah',
-            'tagihan.kategori'
-        ])->get();
-
-        // Ambil tagihan untuk form create
-        $tagihans = Tagihan::with([
-            'siswa.kelas.sekolah',
-            'kategori'
-        ])->get();
-
-        return Inertia::render('Pembayaran/Index', [
-            'pembayarans' => $pembayarans,
-            'tagihans' => $tagihans,
-        ]);
-    }
-
-    // STORE
-   
-
-    // EDIT (ambil data untuk modal)
-    public function edit(Pembayaran $pembayaran)
-    {
-        $tagihans = Tagihan::with([
-            'siswa.kelas.sekolah',
-            'kategori'
-        ])->get();
-
-        return Inertia::render('Pembayaran/Edit', [
-            'pembayaran' => $pembayaran,
-            'tagihans' => $tagihans,
-        ]);
-    }
-
-    // UPDATE
-        public function store(Request $request)
-    {
-        $data = $request->validate([
+        $validated = $request->validate([
             'tagihan_id' => 'required|exists:tagihans,id',
-            'tanggal_bayar' => 'required|date',
             'nominal' => 'required|numeric|min:1',
-            'metode' => 'required|string',
+            'keterangan' => 'nullable|string',
+            'metode' => 'nullable|string',
         ]);
 
-        $pembayaran = Pembayaran::create($data);
+        DB::transaction(function () use ($validated) {
+            $tagihan = Tagihan::findOrFail($validated['tagihan_id']);
 
-        // Update sisa tagihan dan status
-        $tagihan = Tagihan::find($data['tagihan_id']);
-        $tagihan->sisa_tagihan -= $data['nominal'];
-        $tagihan->status = $tagihan->sisa_tagihan <= 0 ? 'lunas' : 'belum_lunas';
-        $tagihan->save();
+            // simpan pembayaran
+            Pembayaran::create([
+                'tagihan_id'    => $tagihan->id,
+                'nominal'       => $validated['nominal'],
+                'tanggal_bayar' => now(),
+                'keterangan'    => $validated['keterangan'] ?? '-',
+                'metode'        => $validated['metode'] ?? 'Tunai', // ✅ default "Tunai"
+            ]);
 
-        // Redirect ke halaman index (Inertia akan refresh)
-        return redirect()->route('pembayarans.index');
-    }
+            // update sisa tagihan
+            $tagihan->sisa_tagihan -= $validated['nominal'];
+            if ($tagihan->sisa_tagihan <= 0) {
+                $tagihan->sisa_tagihan = 0;
+                $tagihan->status = 'lunas';
+            }
+            $tagihan->save();
+        });
 
-    public function update(Request $request, Pembayaran $pembayaran)
-    {
-        $data = $request->validate([
-            'tagihan_id' => 'required|exists:tagihans,id',
-            'tanggal_bayar' => 'required|date',
-            'nominal' => 'required|numeric|min:1',
-            'metode' => 'required|string',
-        ]);
-
-        // Restore sisa tagihan lama
-        $oldNominal = $pembayaran->nominal;
-        $tagihan = $pembayaran->tagihan;
-        $tagihan->sisa_tagihan += $oldNominal;
-
-        // Update pembayaran
-        $pembayaran->update($data);
-
-        // Update sisa tagihan baru
-        $tagihan->sisa_tagihan -= $data['nominal'];
-        $tagihan->status = $tagihan->sisa_tagihan <= 0 ? 'lunas' : 'belum_lunas';
-        $tagihan->save();
-
-        return redirect()->route('pembayarans.index');
-    }
-   
-
-    // DESTROY
-    public function destroy(Pembayaran $pembayaran)
-    {
-        // Kembalikan sisa_tagihan sebelum hapus
-        $tagihan = Tagihan::find($pembayaran->tagihan_id);
-        $tagihan->sisa_tagihan += $pembayaran->nominal;
-        if ($tagihan->sisa_tagihan > $tagihan->total_tagihan) {
-            $tagihan->sisa_tagihan = $tagihan->total_tagihan;
-        }
-        if ($tagihan->sisa_tagihan < $tagihan->total_tagihan) {
-            $tagihan->status = 'belum_lunas';
-        }
-        $tagihan->save();
-
-        $pembayaran->delete();
-
-        return redirect()->route('pembayarans.index');
+        return back()->with('success', 'Pembayaran berhasil ditambahkan.');
     }
 }

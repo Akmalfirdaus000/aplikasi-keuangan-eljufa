@@ -22,4 +22,5 @@ class Siswa extends Model
     {
         return $this->hasMany(Tagihan::class);
     }
+    
 }

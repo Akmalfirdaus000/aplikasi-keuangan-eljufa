@@ -1,18 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { useForm, usePage, router } from "@inertiajs/react"
-import { route } from "ziggy-js" // <-- pastikan ziggy-js sudah terpasang dan dikonfigurasi
-
+import { useForm, router, usePage } from "@inertiajs/react"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import { useToast } from "@/hooks/use-toast" // pastikan hook toast sudah ada
 
 export default function KategoriIndex() {
   const { kategoriList } = usePage().props
+  const { toast } = useToast()
+
   const [data, setData] = useState(kategoriList || [])
   const [openCreate, setOpenCreate] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
@@ -24,11 +25,17 @@ export default function KategoriIndex() {
   // === CREATE ===
   const onCreate = (e) => {
     e.preventDefault()
-    router.post(route("kategori.store"), createForm.data, {
-      onSuccess: () => {
+    router.post(route("kategoris.store"), createForm.data, {
+      onSuccess: (page) => {
+        // Tambahkan kategori baru ke state
+        setData(prev => [...prev, page.props.kategori || createForm.data])
+        toast({ title: "Berhasil", description: "Kategori berhasil ditambahkan" })
         setOpenCreate(false)
         createForm.reset()
       },
+      onError: () => {
+        toast({ title: "Gagal", description: "Tidak bisa menambahkan kategori", variant: "destructive" })
+      }
     })
   }
 
@@ -42,21 +49,33 @@ export default function KategoriIndex() {
   // === UPDATE ===
   const onEdit = (e) => {
     e.preventDefault()
-    router.put(route("kategori.update", editForm.data.id), editForm.data, {
-      onSuccess: () => setOpenEdit(false),
+    router.put(route("kategoris.update", editForm.data.id), editForm.data, {
+      onSuccess: () => {
+        setData(prev => prev.map(k => k.id === editForm.data.id ? { ...k, ...editForm.data } : k))
+        toast({ title: "Berhasil", description: "Kategori berhasil diupdate" })
+        setOpenEdit(false)
+      },
+      onError: () => {
+        toast({ title: "Gagal", description: "Tidak bisa update kategori", variant: "destructive" })
+      }
     })
   }
 
   // === DELETE ===
   const onDelete = (id) => {
     if (!confirm("Yakin ingin menghapus kategori ini?")) return
-    router.delete(route("kategori.destroy", id), {
-      onSuccess: () => setData((prev) => prev.filter((k) => k.id !== id)),
+    router.delete(route("kategoris.destroy", id), {
+      onSuccess: () => {
+        setData(prev => prev.filter(k => k.id !== id))
+        toast({ title: "Berhasil", description: "Kategori berhasil dihapus" })
+      },
+      onError: () => {
+        toast({ title: "Gagal", description: "Tidak bisa menghapus kategori", variant: "destructive" })
+      }
     })
   }
 
   return (
-    
     <AuthenticatedLayout>
       <main className="p-4 md:p-6">
         <Card>
