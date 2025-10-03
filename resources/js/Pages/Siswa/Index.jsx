@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useForm, usePage, router } from "@inertiajs/react"
-// import { route } from "ziggy-js" // Import route from ziggy-js
+import { route } from "ziggy-js"
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination"
+
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 
 export default function SiswaIndex() {
@@ -30,16 +39,15 @@ export default function SiswaIndex() {
   const [kelasOptionsEdit, setKelasOptionsEdit] = useState([])
   const [lokalOptionsEdit, setLokalOptionsEdit] = useState([])
 
-  // Create dependencies
+  // Pagination
+  const [page, setPage] = useState(1)
+  const perPage = 5
+
+  // --- CREATE DEPENDENCIES ---
   useEffect(() => {
     if (createForm.data.sekolah_id) {
       const s = sekolahList.find((x) => x.id === Number.parseInt(createForm.data.sekolah_id))
       setKelasOptionsCreate(s?.kelas || [])
-      createForm.setData("kelas_id", "")
-      setLokalOptionsCreate([])
-      createForm.setData("lokal", "")
-    } else {
-      setKelasOptionsCreate([])
       createForm.setData("kelas_id", "")
       setLokalOptionsCreate([])
       createForm.setData("lokal", "")
@@ -58,22 +66,14 @@ export default function SiswaIndex() {
           createForm.setData("lokal", "")
         }
       }
-    } else {
-      setLokalOptionsCreate([])
-      createForm.setData("lokal", "")
     }
   }, [createForm.data.kelas_id])
 
-  // Edit dependencies
+  // --- EDIT DEPENDENCIES ---
   useEffect(() => {
     if (editForm.data.sekolah_id) {
       const s = sekolahList.find((x) => x.id === Number.parseInt(editForm.data.sekolah_id))
       setKelasOptionsEdit(s?.kelas || [])
-      editForm.setData("kelas_id", "")
-      setLokalOptionsEdit([])
-      editForm.setData("lokal", "")
-    } else {
-      setKelasOptionsEdit([])
       editForm.setData("kelas_id", "")
       setLokalOptionsEdit([])
       editForm.setData("lokal", "")
@@ -92,12 +92,10 @@ export default function SiswaIndex() {
           editForm.setData("lokal", "")
         }
       }
-    } else {
-      setLokalOptionsEdit([])
-      editForm.setData("lokal", "")
     }
   }, [editForm.data.kelas_id])
 
+  // CRUD Handlers
   const onCreate = (e) => {
     e.preventDefault()
     router.post(route("siswas.store"), createForm.data, {
@@ -132,7 +130,7 @@ export default function SiswaIndex() {
     router.delete(route("siswas.destroy", id))
   }
 
-  // Optional quick filters on Siswa page
+  // --- FILTERS ---
   const [q, setQ] = useState("")
   const [filterSekolahId, setFilterSekolahId] = useState("")
   const [filterKelasId, setFilterKelasId] = useState("")
@@ -158,6 +156,14 @@ export default function SiswaIndex() {
     setFilterSekolahId("")
     setFilterKelasId("")
   }
+
+  // --- PAGINATION ---
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filteredSiswas.slice(start, start + perPage)
+  }, [filteredSiswas, page])
+
+  const totalPages = Math.ceil(filteredSiswas.length / perPage)
 
   return (
     <AuthenticatedLayout className="p-4 md:p-6">
@@ -213,9 +219,9 @@ export default function SiswaIndex() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSiswas.map((s, idx) => (
+              {paginatedData.map((s, idx) => (
                 <TableRow key={s.id}>
-                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{(page - 1) * perPage + idx + 1}</TableCell>
                   <TableCell className="font-medium">{s.nama_siswa}</TableCell>
                   <TableCell>{s.kelas.sekolah.nama_sekolah}</TableCell>
                   <TableCell>{s.kelas.nama_kelas}</TableCell>
@@ -232,6 +238,37 @@ export default function SiswaIndex() {
               ))}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                      aria-disabled={page === 1}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink href="#" isActive={page === i + 1} onClick={() => setPage(i + 1)}>
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                      aria-disabled={page === totalPages}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -241,29 +278,29 @@ export default function SiswaIndex() {
           <DialogHeader>
             <DialogTitle>Tambah Siswa</DialogTitle>
           </DialogHeader>
-          <form onSubmit={onCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={onCreate} className="space-y-3">
             <div>
-              <Label className="mb-1 block">Sekolah</Label>
+              <Label>Nama Siswa</Label>
+              <Input value={createForm.data.nama_siswa} onChange={(e) => createForm.setData("nama_siswa", e.target.value)} />
+            </div>
+            <div>
+              <Label>Sekolah</Label>
               <Select value={createForm.data.sekolah_id} onValueChange={(v) => createForm.setData("sekolah_id", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Sekolah" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sekolahList.map((x) => (
-                    <SelectItem key={x.id} value={String(x.id)}>
-                      {x.nama_sekolah}
+                  {sekolahList.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.nama_sekolah}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-1 block">Kelas</Label>
-              <Select
-                value={createForm.data.kelas_id}
-                onValueChange={(v) => createForm.setData("kelas_id", v)}
-                disabled={!kelasOptionsCreate.length}
-              >
+              <Label>Kelas</Label>
+              <Select value={createForm.data.kelas_id} onValueChange={(v) => createForm.setData("kelas_id", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Kelas" />
                 </SelectTrigger>
@@ -277,12 +314,8 @@ export default function SiswaIndex() {
               </Select>
             </div>
             <div>
-              <Label className="mb-1 block">Lokal</Label>
-              <Select
-                value={createForm.data.lokal}
-                onValueChange={(v) => createForm.setData("lokal", v)}
-                disabled={!lokalOptionsCreate.length}
-              >
+              <Label>Lokal</Label>
+              <Select value={createForm.data.lokal} onValueChange={(v) => createForm.setData("lokal", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Lokal" />
                 </SelectTrigger>
@@ -295,25 +328,7 @@ export default function SiswaIndex() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2">
-              <Label className="mb-1 block">Nama Siswa</Label>
-              <Input
-                placeholder="Nama Siswa"
-                value={createForm.data.nama_siswa}
-                onChange={(e) => createForm.setData("nama_siswa", e.target.value)}
-              />
-              {createForm.errors.nama_siswa && (
-                <div className="text-sm text-red-600 mt-1">{createForm.errors.nama_siswa}</div>
-              )}
-            </div>
-            <div className="md:col-span-2 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={createForm.processing}>
-                Simpan
-              </Button>
-            </div>
+            <Button type="submit">Simpan</Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -324,29 +339,29 @@ export default function SiswaIndex() {
           <DialogHeader>
             <DialogTitle>Edit Siswa</DialogTitle>
           </DialogHeader>
-          <form onSubmit={onEdit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={onEdit} className="space-y-3">
             <div>
-              <Label className="mb-1 block">Sekolah</Label>
+              <Label>Nama Siswa</Label>
+              <Input value={editForm.data.nama_siswa} onChange={(e) => editForm.setData("nama_siswa", e.target.value)} />
+            </div>
+            <div>
+              <Label>Sekolah</Label>
               <Select value={editForm.data.sekolah_id} onValueChange={(v) => editForm.setData("sekolah_id", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Sekolah" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sekolahList.map((x) => (
-                    <SelectItem key={x.id} value={String(x.id)}>
-                      {x.nama_sekolah}
+                  {sekolahList.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.nama_sekolah}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-1 block">Kelas</Label>
-              <Select
-                value={editForm.data.kelas_id}
-                onValueChange={(v) => editForm.setData("kelas_id", v)}
-                disabled={!kelasOptionsEdit.length}
-              >
+              <Label>Kelas</Label>
+              <Select value={editForm.data.kelas_id} onValueChange={(v) => editForm.setData("kelas_id", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Kelas" />
                 </SelectTrigger>
@@ -360,12 +375,8 @@ export default function SiswaIndex() {
               </Select>
             </div>
             <div>
-              <Label className="mb-1 block">Lokal</Label>
-              <Select
-                value={editForm.data.lokal}
-                onValueChange={(v) => editForm.setData("lokal", v)}
-                disabled={!lokalOptionsEdit.length}
-              >
+              <Label>Lokal</Label>
+              <Select value={editForm.data.lokal} onValueChange={(v) => editForm.setData("lokal", v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih Lokal" />
                 </SelectTrigger>
@@ -378,24 +389,7 @@ export default function SiswaIndex() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2">
-              <Label className="mb-1 block">Nama Siswa</Label>
-              <Input
-                value={editForm.data.nama_siswa}
-                onChange={(e) => editForm.setData("nama_siswa", e.target.value)}
-              />
-              {editForm.errors.nama_siswa && (
-                <div className="text-sm text-red-600 mt-1">{editForm.errors.nama_siswa}</div>
-              )}
-            </div>
-            <div className="md:col-span-2 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={editForm.processing}>
-                Update
-              </Button>
-            </div>
+            <Button type="submit">Update</Button>
           </form>
         </DialogContent>
       </Dialog>
