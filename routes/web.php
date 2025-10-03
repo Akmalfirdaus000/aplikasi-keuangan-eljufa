@@ -126,5 +126,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Tambahan post khusus (kalau perlu)
     Route::post('/pembayaran', [PembayaranController::class, 'store'])->name('pembayaran.store');
 });
+use App\Http\Controllers\LaporanController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
+
+    // Export
+    Route::get('/laporan/per-siswa/export', [LaporanController::class, 'exportPerSiswa'])->name('laporan.per_siswa.export');
+    Route::get('/laporan/rekap/export', [LaporanController::class, 'exportRekap'])->name('laporan.rekap.export');
+    Route::get('/laporan/tunggakan/export', [LaporanController::class, 'exportTunggakan'])->name('laporan.tunggakan.export');
+});
 
 require __DIR__.'/auth.php';

@@ -49,14 +49,9 @@ export default function Sidebar() {
         { name: "Pembayaran", icon: <CreditCard size={16} />, route: "pembayarans.index" },
       ],
     },
-    {
-      name: "Laporan",
-      icon: <FileText size={18} className="mr-2" />,
-      subMenu: [
-        { name: "Laporan Tagihan", route: "laporan.tagihan" },
-        { name: "Laporan Pembayaran", route: "laporan.pembayaran" },
-      ],
-    },
+    { name: "Laporan", icon: <Home size={18} className="mr-2" />, route: "laporan.index" },
+
+    
   ];
 
   const isActive = (routeName) => url.includes(route(routeName, [], false));

@@ -1,8 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { usePage, router } from "@inertiajs/react"
-// import { route } from "laravel-vite-plugin/inertia-helpers"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import {
   Card,
@@ -24,6 +23,15 @@ import {
   DialogTitle,
 } from "@/Components/ui"
 import { Label } from "@/Components/ui/label"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "@/Components/ui/pagination"
 
 export default function Index() {
   const { tagihans = [], siswas = [], kategoris = [] } = usePage().props
@@ -48,8 +56,9 @@ export default function Index() {
   })
 
   const [openModal, setOpenModal] = useState(false)
+  const [page, setPage] = useState(1)
+  const pageSize = 10
 
-  // Toolbar filter/pencarian
   // Toolbar filter/pencarian
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -122,6 +131,7 @@ export default function Index() {
     })
     setOpenModal(true)
   }
+
   const handleDetail = (siswaId) => {
     if (!siswaId) return
     router.visit(route("siswa.show", siswaId))
@@ -187,6 +197,31 @@ export default function Index() {
     return Array.from(set)
   }, [siswas])
 
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredSiswa.length / pageSize)), [filteredSiswa, pageSize])
+  const currentPage = useMemo(() => Math.min(page, totalPages), [page, totalPages])
+  const pageOffset = useMemo(() => (currentPage - 1) * pageSize, [currentPage, pageSize])
+
+  const paginatedSiswa = useMemo(() => {
+    const start = pageOffset
+    return filteredSiswa.slice(start, start + pageSize)
+  }, [filteredSiswa, pageOffset, pageSize])
+
+  const pageNumbers = useMemo(() => {
+    const total = totalPages
+    const curr = currentPage
+    const range = []
+    const start = Math.max(1, curr - 2)
+    const end = Math.min(total, curr + 2)
+    for (let i = start; i <= end; i++) range.push(i)
+    if (!range.includes(1)) range.unshift(1, "start-ellipsis")
+    if (!range.includes(total)) range.push("end-ellipsis", total)
+    return range
+  }, [currentPage, totalPages])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, filterStatus, filterKategoriId, filterSekolah, filterKelasSel, filterLokal])
+
   return (
     <AuthenticatedLayout
       header={
@@ -245,7 +280,8 @@ export default function Index() {
               <option value="Lunas">Lunas</option>
             </select>
           </div>
-                    <div className="flex flex-col gap-1">
+
+          <div className="flex flex-col gap-1">
             <Label htmlFor="sekolah">Sekolah</Label>
             <select
               id="sekolah"
@@ -300,7 +336,7 @@ export default function Index() {
             <Button
               variant="outline"
               onClick={() => {
-               setSearch("")
+                setSearch("")
                 setFilterStatus("all")
                 setFilterKategoriId("all")
                 setFilterSekolah("all")
@@ -432,10 +468,10 @@ export default function Index() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSiswa.length > 0 ? (
-                  filteredSiswa.map((siswa, index) => (
+                {paginatedSiswa.length > 0 ? (
+                  paginatedSiswa.map((siswa, index) => (
                     <TableRow key={siswa.id}>
-                      <TableCell className="align-top">{index + 1}</TableCell>
+                      <TableCell className="align-top">{index + 1 + pageOffset}</TableCell>
                       <TableCell className="align-top">
                         <div className="flex flex-col">
                           <span className="font-medium">{siswa.nama_siswa}</span>
@@ -497,6 +533,41 @@ export default function Index() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-disabled={currentPage <= 1}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+
+                {pageNumbers.map((p, i) =>
+                  typeof p === "number" ? (
+                    <PaginationItem key={p}>
+                      <PaginationLink isActive={p === currentPage} onClick={() => setPage(p)}>
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={`${p}-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ),
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-disabled={currentPage >= totalPages}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>

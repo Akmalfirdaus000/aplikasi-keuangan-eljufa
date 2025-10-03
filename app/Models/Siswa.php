@@ -11,16 +11,25 @@ class Siswa extends Model
 
     protected $fillable = ['kelas_id', 'nama_siswa'];
 
-    // Relasi: Siswa milik kelas
     public function kelas()
     {
         return $this->belongsTo(Kelas::class);
     }
 
-    // Relasi: Siswa punya banyak tagihan
     public function tagihans()
     {
         return $this->hasMany(Tagihan::class);
     }
-    
+
+    // Shortcut: ambil nama sekolah langsung dari siswa
+    public function getSekolahAttribute()
+    {
+        return $this->kelas?->sekolah?->nama_sekolah;
+    }
+
+    // Shortcut: ambil lokal dari kelas
+    public function getLokalAttribute()
+    {
+        return $this->kelas?->lokal;
+    }
 }
