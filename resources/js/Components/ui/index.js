@@ -17,5 +17,14 @@ export { Switch } from "./switch"
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion"
 export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "./dropdown-menu"
 
-
+export {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "./sidebar"
 // export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";

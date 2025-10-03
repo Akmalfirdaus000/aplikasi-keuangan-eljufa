@@ -113,6 +113,10 @@ export default function StudentDetail({ siswa, pembayarans }) {
                             {siswa.kelas?.nama_kelas}
                         </p>
                         <p>
+                            <span className="font-semibold">Lokal:</span>{" "}
+                            {siswa.kelas?.lokal}
+                        </p>
+                        <p>
                             <span className="font-semibold">Sekolah:</span>{" "}
                             {siswa.kelas?.sekolah?.nama_sekolah}
                         </p>

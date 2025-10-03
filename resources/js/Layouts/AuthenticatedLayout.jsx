@@ -1,18 +1,18 @@
 import { usePage } from "@inertiajs/react"
 import Sidebar from "@/Components/Sidebar"
-import { Toaster } from "@/components/ui/toaster" // ✅ Import Toaster
+import { Toaster } from "@/components/ui/toaster"
 
 export default function AuthenticatedLayout({ header, children }) {
     const { auth } = usePage().props
     const user = auth?.user ?? { name: "Guest" }
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
-            {/* Sidebar */}
+        <div className="min-h-screen bg-gray-100">
+            {/* Sidebar fixed */}
             <Sidebar />
 
-            {/* Main content area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Main content area (digeser 64px biar gak ketiban sidebar) */}
+            <div className="ml-64 flex flex-col min-h-screen">
                 {/* Header */}
                 {header && (
                     <header className="bg-white shadow flex-shrink-0">
