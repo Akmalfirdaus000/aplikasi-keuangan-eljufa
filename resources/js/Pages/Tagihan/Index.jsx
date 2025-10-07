@@ -237,7 +237,7 @@
       <AuthenticatedLayout
         header={
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold">Tagihan</h1>
+            <h1 className="text-xl font-bold">Tagihan aaaaaaaaaaaaaaaa</h1>
             <p className="text-sm text-muted-foreground">Kelola tagihan per siswa berdasarkan kategori.</p>
           </div>
         }
