@@ -4,42 +4,36 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
-export default function FiltersCard({
+export default function FiltersCardKategori({
   sekolahList = [],
+  kategoriList = [],
   kelasOptions = [],
   lokalOptions = [],
-  filterSekolah,
-  setFilterSekolah,
-  filterKelas,
-  setFilterKelas,
-  filterLokal,
-  setFilterLokal,
-  dateFrom,
-  setDateFrom,
-  dateTo,
-  setDateTo,
-  search,
-  setSearch,
+  filterSekolah, setFilterSekolah,
+  filterKelas, setFilterKelas,
+  filterLokal, setFilterLokal,
+  filterKategori, setFilterKategori,
+  dateFrom, setDateFrom,
+  dateTo, setDateTo,
+  search, setSearch,
+  onApplyServer,
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Filter</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-3">
+      <CardContent className="grid grid-cols-1 md:grid-cols-7 gap-3">
         <div>
           <Label>Sekolah</Label>
-          <Select value={filterSekolah} onValueChange={setFilterSekolah}>
-            <SelectTrigger>
-              <SelectValue placeholder="Semua Sekolah" />
-            </SelectTrigger>
+          <Select value={filterSekolah} onValueChange={(v)=>{setFilterSekolah(v); setFilterKelas("all"); setFilterLokal("all")}}>
+            <SelectTrigger><SelectValue placeholder="Semua Sekolah" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Sekolah</SelectItem>
               {sekolahList.map((s) => (
-                <SelectItem key={s.id} value={s.nama_sekolah}>
-                  {s.nama_sekolah}
-                </SelectItem>
+                <SelectItem key={s.id} value={s.nama_sekolah}>{s.nama_sekolah}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -47,51 +41,56 @@ export default function FiltersCard({
 
         <div>
           <Label>Kelas</Label>
-          <Select value={filterKelas} onValueChange={setFilterKelas}>
-            <SelectTrigger>
-              <SelectValue placeholder="Semua Kelas" />
-            </SelectTrigger>
+          <Select value={filterKelas} onValueChange={setFilterKelas} disabled={filterSekolah === "all"}>
+            <SelectTrigger><SelectValue placeholder="Semua Kelas" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Kelas</SelectItem>
-              {kelasOptions.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {k}
-                </SelectItem>
-              ))}
+              {kelasOptions.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
         <div>
           <Label>Lokal</Label>
-          <Select value={filterLokal} onValueChange={setFilterLokal}>
-            <SelectTrigger>
-              <SelectValue placeholder="Semua Lokal" />
-            </SelectTrigger>
+          <Select value={filterLokal} onValueChange={setFilterLokal} disabled={filterSekolah === "all"}>
+            <SelectTrigger><SelectValue placeholder="Semua Lokal" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Lokal</SelectItem>
-              {lokalOptions.map((l) => (
-                <SelectItem key={l} value={l}>
-                  {l}
-                </SelectItem>
+              {lokalOptions.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Kategori</Label>
+          <Select value={filterKategori} onValueChange={setFilterKategori}>
+            <SelectTrigger><SelectValue placeholder="Semua Kategori" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kategori</SelectItem>
+              {kategoriList.map((k) => (
+                <SelectItem key={k.id} value={String(k.id)}>{k.nama_kategori}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* <div>
-          <Label>Periode dari</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <div>
+          <Label>Dari Tanggal</Label>
+          <Input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} />
         </div>
 
         <div>
-          <Label>Periode sampai</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div> */}
+          <Label>Sampai Tanggal</Label>
+          <Input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} />
+        </div>
 
         <div>
-          <Label>Search</Label>
-          <Input placeholder="Nama siswa, id, kelas..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Label>Cari</Label>
+          <Input placeholder="Nama siswa, kategori, kelas..." value={search} onChange={(e)=>setSearch(e.target.value)} />
+        </div>
+
+        <div className="md:col-span-7 flex justify-end">
+          <Button variant="outline" onClick={onApplyServer}>Terapkan di Server</Button>
         </div>
       </CardContent>
     </Card>

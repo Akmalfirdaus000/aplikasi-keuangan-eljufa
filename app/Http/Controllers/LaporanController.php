@@ -2,138 +2,146 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Siswa;
+use Inertia\Inertia;
 use App\Models\Sekolah;
-use App\Models\Kelas;
 use App\Models\Kategori;
-use App\Models\Tagihan;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LaporanController extends Controller
 {
-    public function index(Request $request)
+ public function index(Request $request)
     {
-        $siswas = Siswa::with(['kelas.sekolah'])->get();
-        $tagihans = Tagihan::with(['siswa.kelas.sekolah', 'kategori'])->get();
-        $pembayarans = Pembayaran::with(['siswa.kelas.sekolah', 'tagihan.kategori'])->get();
-        $kategoris = Kategori::all();
-        $sekolahList = Sekolah::all();
+        // Ambil query param polos, jangan pake ->string()
+        $from       = trim((string) $request->input('from', ''));
+        $to         = trim((string) $request->input('to', ''));
+        $sekolah    = (string) $request->input('sekolah', 'all'); // pakai NAMA sekolah
+        $kelas      = (string) $request->input('kelas', 'all');   // pakai NAMA kelas
+        $lokal      = (string) $request->input('lokal', 'all');
+        $kategoriId = (string) $request->input('kategori', 'all'); // id kategori (atau 'all')
+        $search     = (string) $request->input('search', '');
 
-        return Inertia::render('Laporan/Index', [
-            'siswas'       => $siswas,
-            'tagihans'     => $tagihans,
-            'pembayarans'  => $pembayarans,
-            'kategoris'    => $kategoris,
-            'sekolahList'  => $sekolahList,
-        ]);
-    }
+        $amountColumn = 'nominal';
+        $dateColumn   = 'tanggal_bayar';
 
-    // ============================
-    // EXPORT PER SISWA
-    // ============================
-    public function exportPerSiswa(Request $request): StreamedResponse
-    {
-        $filename = "laporan_per_siswa.csv";
-        $siswas = Siswa::with(['kelas.sekolah'])->get();
-        $tagihans = Tagihan::all();
-        $pembayarans = Pembayaran::with('tagihan')->get();
+        $q = Pembayaran::query()
+            ->with([
+                'tagihan:id,siswa_id,kategori_id',
+                'tagihan.kategori:id,nama_kategori',
+                'tagihan.siswa:id,nama_siswa,kelas_id',
+                'tagihan.siswa.kelas:id,nama_kelas,sekolah_id,lokal',
+                'tagihan.siswa.kelas.sekolah:id,nama_sekolah',
+            ])
+            ->select(['id','tagihan_id',$amountColumn,$dateColumn,'keterangan','metode']);
 
-        $callback = function () use ($siswas, $tagihans, $pembayarans) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Nama', 'Sekolah', 'Kelas', 'Lokal', 'Total Tagihan', 'Total Bayar', 'Sisa']);
-
-            foreach ($siswas as $siswa) {
-                $tList = $tagihans->where('siswa_id', $siswa->id);
-                $totalTagihan = $tList->sum('total_tagihan');
-                $totalSisa = $tList->sum('sisa_tagihan');
-                $totalBayar = $pembayarans->filter(fn($p) => optional($p->siswa)->id === $siswa->id)
-                                          ->sum('nominal');
-
-                fputcsv($file, [
-                    $siswa->id,
-                    $siswa->nama_siswa,
-                    optional($siswa->kelas?->sekolah)->nama_sekolah,
-                    optional($siswa->kelas)->nama_kelas,
-                    $siswa->kelas->lokal ?? '-',
-                    $totalTagihan,
-                    $totalBayar,
-                    $totalSisa,
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->streamDownload($callback, $filename, [
-            "Content-Type" => "text/csv",
-        ]);
-    }
-
-    // ============================
-    // EXPORT REKAP PEMBAYARAN
-    // ============================
-    public function exportRekap(Request $request): StreamedResponse
-    {
-        $filename = "laporan_rekap.csv";
-        $pembayarans = Pembayaran::all();
-
-        $totals = [];
-        foreach ($pembayarans as $p) {
-            $date = \Carbon\Carbon::parse($p->tanggal_bayar ?? $p->created_at);
-            $key = $date->format('Y-m');
-            if (!isset($totals[$key])) $totals[$key] = 0;
-            $totals[$key] += $p->nominal;
+        // Filter tanggal
+        if ($from !== '' && $to !== '') {
+            $q->whereBetween($dateColumn, [$from, $to]);
+        } elseif ($from !== '') {
+            $q->whereDate($dateColumn, '>=', $from);
+        } elseif ($to !== '') {
+            $q->whereDate($dateColumn, '<=', $to);
         }
 
-        $callback = function () use ($totals) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['Periode', 'Total Pemasukan']);
-            foreach ($totals as $period => $total) {
-                fputcsv($file, [$period, $total]);
-            }
-            fclose($file);
-        };
+        // Filter sekolah/kelas/lokal
+        if ($sekolah !== 'all') {
+            $q->whereHas('tagihan.siswa.kelas.sekolah', fn($qq) => $qq->where('nama_sekolah', $sekolah));
+        }
+        if ($kelas !== 'all') {
+            $q->whereHas('tagihan.siswa.kelas', fn($qq) => $qq->where('nama_kelas', $kelas));
+        }
+        if ($lokal !== 'all') {
+            $q->whereHas('tagihan.siswa.kelas', fn($qq) => $qq->where('lokal', $lokal));
+        }
 
-        return response()->streamDownload($callback, $filename, [
-            "Content-Type" => "text/csv",
-        ]);
-    }
+        // Filter kategori (by id)
+        if ($kategoriId !== 'all' && $kategoriId !== '') {
+            $q->whereHas('tagihan.kategori', fn($qq) => $qq->where('id', $kategoriId));
+        }
 
-    // ============================
-    // EXPORT TUNGGAKAN
-    // ============================
-    public function exportTunggakan(Request $request): StreamedResponse
-    {
-        $filename = "laporan_tunggakan.csv";
-        $siswas = Siswa::with(['kelas.sekolah'])->get();
-        $tagihans = Tagihan::with('siswa')->get();
+        // Free-text search: nama siswa / kategori / keterangan
+        if ($search !== '') {
+            $term = mb_strtolower($search);
+            $q->where(function($qq) use ($term) {
+                $qq->whereHas('tagihan.siswa', fn($w) => $w->whereRaw('LOWER(nama_siswa) like ?', ["%{$term}%"]))
+                  ->orWhereHas('tagihan.kategori', fn($w) => $w->whereRaw('LOWER(nama_kategori) like ?', ["%{$term}%"]))
+                  ->orWhereRaw('LOWER(keterangan) like ?', ["%{$term}%"]);
+            });
+        }
 
-        $callback = function () use ($siswas, $tagihans) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Nama', 'Sekolah', 'Kelas', 'Lokal', 'Total Tunggakan']);
+        $rows = $q->get()->map(function($p) use ($amountColumn, $dateColumn) {
+            $tgl = $p->{$dateColumn};
+            if ($tgl instanceof \Carbon\CarbonInterface) $tgl = $tgl->format('Y-m-d');
+            elseif ($tgl) $tgl = (string) $tgl;
 
-            foreach ($siswas as $siswa) {
-                $tunggakan = $tagihans->where('siswa_id', $siswa->id)->sum('sisa_tagihan');
-                if ($tunggakan > 0) {
-                    fputcsv($file, [
-                        $siswa->id,
-                        $siswa->nama_siswa,
-                        optional($siswa->kelas?->sekolah)->nama_sekolah,
-                        optional($siswa->kelas)->nama_kelas,
-                        $siswa->kelas->lokal ?? '-',
-                        $tunggakan,
-                    ]);
-                }
-            }
+            return [
+                'id'        => $p->id,
+                'tanggal'   => $tgl,
+                'jumlah'    => (int) ($p->{$amountColumn} ?? 0),
+                'keterangan'=> $p->keterangan,
+                'metode'    => $p->metode,
+                'siswa'     => [
+                    'id'   => optional($p->tagihan?->siswa)->id,
+                    'nama' => optional($p->tagihan?->siswa)->nama_siswa,
+                ],
+                'kelas'     => [
+                    'id'   => optional($p->tagihan?->siswa?->kelas)->id,
+                    'nama' => optional($p->tagihan?->siswa?->kelas)->nama_kelas,
+                    'lokal'=> optional($p->tagihan?->siswa?->kelas)->lokal,
+                ],
+                'sekolah'   => [
+                    'id'   => optional($p->tagihan?->siswa?->kelas?->sekolah)->id,
+                    'nama' => optional($p->tagihan?->siswa?->kelas?->sekolah)->nama_sekolah,
+                ],
+                'kategori'  => [
+                    'id'   => optional($p->tagihan?->kategori)->id,
+                    'nama' => optional($p->tagihan?->kategori)->nama_kategori,
+                ],
+            ];
+        });
 
-            fclose($file);
-        };
+        // Ringkasan per kategori
+        $byKategori = [];
+        foreach ($rows as $r) {
+            $key = $r['kategori']['nama'] ?? '(Tanpa Kategori)';
+            $byKategori[$key] = ($byKategori[$key] ?? 0) + ($r['jumlah'] ?? 0);
+        }
+        $summaryKategori = [];
+        foreach ($byKategori as $nama => $total) {
+            $summaryKategori[] = ['nama' => $nama, 'total' => (int) $total];
+        }
+        usort($summaryKategori, fn($a,$b) => $b['total'] <=> $a['total']);
 
-        return response()->streamDownload($callback, $filename, [
-            "Content-Type" => "text/csv",
+        // Dropdown sumber
+        $sekolahList = Sekolah::query()
+            ->with(['kelas:id,nama_kelas,sekolah_id,lokal,tingkat'])
+            ->select('id','nama_sekolah')
+            ->get()
+            ->map(fn($s) => [
+                'id'           => $s->id,
+                'nama_sekolah' => $s->nama_sekolah,
+                'kelas'        => $s->kelas->map(fn($k) => [
+                    'id' => $k->id, 'nama_kelas' => $k->nama_kelas, 'lokal' => $k->lokal, 'tingkat' => $k->tingkat
+                ])->values(),
+            ]);
+
+        $kategoriList = Kategori::select('id','nama_kategori')->orderBy('nama_kategori')->get();
+
+        return Inertia::render('Laporan/Index', [
+            'rows'         => $rows,
+            'summary'      => $summaryKategori,
+            'sekolahList'  => $sekolahList,
+            'kategoriList' => $kategoriList,
+            'filters'      => [
+                'from'    => $from,
+                'to'      => $to,
+                'sekolah' => $sekolah,
+                'kelas'   => $kelas,
+                'lokal'   => $lokal,
+                'kategori'=> $kategoriId,
+                'search'  => $search,
+            ],
+            'build_id'     => now()->format('YmdHis'),
         ]);
     }
 }

@@ -137,4 +137,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/laporan/tunggakan/export', [LaporanController::class, 'exportTunggakan'])->name('laporan.tunggakan.export');
 });
 
+// routes/web.php
+Route::get('/laporan/per-kategori', [\App\Http\Controllers\LaporanController::class, 'index'])
+    ->name('laporan.perkategori.index');
+
+
 require __DIR__.'/auth.php';

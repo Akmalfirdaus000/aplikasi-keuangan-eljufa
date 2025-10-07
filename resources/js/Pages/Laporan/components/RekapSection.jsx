@@ -47,3 +47,21 @@ export default function RekapSection({ rekapData = [], fmtID, handleExport }) {
     </Card>
   )
 }
+        {/* Info ringkas */}
+        {/* <Card>
+          <CardHeader><CardTitle>Ringkasan</CardTitle></CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-xl border p-4">
+              <div className="text-sm text-muted-foreground">Total Baris</div>
+              <div className="text-2xl font-semibold">{filtered.length}</div>
+            </div>
+            <div className="rounded-xl border p-4">
+              <div className="text-sm text-muted-foreground">Total Nominal</div>
+              <div className="text-2xl font-semibold">{formatRupiah(totalNominal)}</div>
+            </div>
+            <div className="rounded-xl border p-4">
+              <div className="text-sm text-muted-foreground">Periode</div>
+              <div className="text-base">{dateFrom || "−"} s/d {dateTo || "−"}</div>
+            </div>
+          </CardContent>
+        </Card> */}

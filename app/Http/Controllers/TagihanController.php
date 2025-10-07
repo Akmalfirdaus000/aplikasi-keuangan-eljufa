@@ -10,70 +10,63 @@ use Inertia\Inertia;
 
 class TagihanController extends Controller
 {
-    public function index()
-    {
-        // Ambil semua tagihan (kolom seperlunya)
-        $tagihansRaw = Tagihan::query()
-            ->select('id','siswa_id','kelas_id','kategori_id','deskripsi','total_tagihan','sisa_tagihan','status')
-            ->get();
+public function index()
+{
+    $tagihansRaw = Tagihan::query()
+        ->select('id','siswa_id','kelas_id','kategori_id','deskripsi','total_tagihan','sisa_tagihan','status')
+        ->get();
 
-        // Kelompokkan per siswa untuk bikin tagihanMap
-        $tagihanGrouped = $tagihansRaw->groupBy('siswa_id');
+    $tagihanGrouped = $tagihansRaw->groupBy('siswa_id');
 
-        // Ambil siswa + relasi yang dipakai FE
-        $siswasRaw = Siswa::query()
-            ->with([
-                'kelas:id,nama_kelas,sekolah_id',
-                'kelas.sekolah:id,nama_sekolah',
-                // aktifkan jika memang ada relasi 'lokal':
-                // 'lokal:id,nama_lokal',
-            ])
-            ->select('id','nama_siswa','kelas_id'/*,'lokal_id'*/)
-            ->get();
+    $siswasRaw = Siswa::query()
+        ->with([
+            // tambahkan kolom 'lokal' di select kelas
+            'kelas:id,nama_kelas,sekolah_id,lokal',
+            'kelas.sekolah:id,nama_sekolah',
+        ])
+        ->select('id','nama_siswa','kelas_id')
+        ->get();
 
-        // KIRIM SEBAGAI ARRAY BERSIH + tanam tagihanMap
-        $siswas = $siswasRaw->map(function ($s) use ($tagihanGrouped) {
-            $map = [];
-            foreach (($tagihanGrouped[$s->id] ?? []) as $t) {
-                $map[$t->kategori_id] = [
-                    'id'            => $t->id,
-                    'siswa_id'      => $t->siswa_id,
-                    'kategori_id'   => $t->kategori_id,
-                    'deskripsi'     => $t->deskripsi,
-                    'total_tagihan' => $t->total_tagihan,
-                    'sisa_tagihan'  => $t->sisa_tagihan,
-                    'status'        => $t->status, // 'belum_lunas' / 'lunas'
-                ];
-            }
-
-            return [
-                'id'         => $s->id,
-                'nama_siswa' => $s->nama_siswa,
-                'kelas'      => $s->kelas ? [
-                    'id'          => $s->kelas->id,
-                    'nama_kelas'  => $s->kelas->nama_kelas,
-                    'sekolah'     => $s->kelas->sekolah ? [
-                        'id'           => $s->kelas->sekolah->id,
-                        'nama_sekolah' => $s->kelas->sekolah->nama_sekolah,
-                    ] : null,
-                ] : null,
-                // 'lokal' => $s->lokal ? ['id'=>$s->lokal->id, 'nama_lokal'=>$s->lokal->nama_lokal] : null,
-                'tagihanMap' => $map, // bisa kosong; FE punya fallback
+    $siswas = $siswasRaw->map(function ($s) use ($tagihanGrouped) {
+        $map = [];
+        foreach (($tagihanGrouped[$s->id] ?? []) as $t) {
+            $map[$t->kategori_id] = [
+                'id'            => $t->id,
+                'siswa_id'      => $t->siswa_id,
+                'kategori_id'   => $t->kategori_id,
+                'deskripsi'     => $t->deskripsi,
+                'total_tagihan' => $t->total_tagihan,
+                'sisa_tagihan'  => $t->sisa_tagihan,
+                'status'        => $t->status,
             ];
-        });
+        }
 
-        $kategoris = Kategori::query()
-            ->select('id','nama_kategori')
-            ->get();
+        return [
+            'id'         => $s->id,
+            'nama_siswa' => $s->nama_siswa,
+            'kelas'      => $s->kelas ? [
+                'id'           => $s->kelas->id,
+                'nama_kelas'   => $s->kelas->nama_kelas,
+                'lokal'        => $s->kelas->lokal, // <<— ambil langsung dari kolom kelas.lokal
+                'sekolah'      => $s->kelas->sekolah ? [
+                    'id'           => $s->kelas->sekolah->id,
+                    'nama_sekolah' => $s->kelas->sekolah->nama_sekolah,
+                ] : null,
+            ] : null,
+            'tagihanMap' => $map,
+        ];
+    });
 
-        // build_id buat ngetes cache backend di produksi
-        return Inertia::render('Tagihan/Index', [
-            'siswas'      => $siswas,
-            'kategoris'   => $kategoris,
-            'tagihansRaw' => $tagihansRaw, // Fallback FE kalau tagihanMap kosong
-            'build_id'    => now()->format('YmdHis'),
-        ]);
-    }
+    $kategoris = Kategori::query()->select('id','nama_kategori')->get();
+
+    return Inertia::render('Tagihan/Index', [
+        'siswas'      => $siswas,
+        'kategoris'   => $kategoris,
+        'tagihansRaw' => $tagihansRaw,
+        'build_id'    => now()->format('YmdHis'),
+    ]);
+}
+
 
     public function store(Request $request)
     {

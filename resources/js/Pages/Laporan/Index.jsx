@@ -5,301 +5,439 @@ import { usePage, router } from "@inertiajs/react"
 import { route } from "ziggy-js"
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
+import FiltersCard from "./components/FiltersComponent"
 
-import { Button } from "@/components/ui"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink,
+  PaginationPrevious, PaginationNext, PaginationEllipsis,
+} from "@/components/ui/pagination"
 
-import FiltersComponent from "./components/FiltersComponent"
-import PerSiswaSection from "./components/PerSiswaSection"
-import RekapSection from "./components/RekapSection"
-import TunggakanSection from "./components/TunggakanSection"
-import TemplateExcelSection from "./components/TemplateExcelSection"
-import { CodeXml } from "lucide-react"
+export default function LaporanPerKategoriIndex() {
+  const { rows = [], sekolahList = [], kategoriList = [], filters = {} } = usePage().props
 
-const routeHelper = (name, params = {}) => {
-  if (typeof window !== "undefined" && window.route) return window.route(name, params)
-  return name
-}
+  // Filter state (default dari server dipakai bila ada)
+  const [filterSekolah, setFilterSekolah]   = useState(filters.sekolah || "all")   // pakai nama sekolah
+  const [filterKelas, setFilterKelas]       = useState(filters.kelas || "all")     // pakai nama kelas
+  const [filterLokal, setFilterLokal]       = useState(filters.lokal || "all")
+  const [filterKategori, setFilterKategori] = useState(filters.kategori || "all")  // pakai id kategori (string)
+  const [dateFrom, setDateFrom]             = useState(filters.from || "")
+  const [dateTo, setDateTo]                 = useState(filters.to || "")
+  const [search, setSearch]                 = useState(filters.search || "")
 
-export default function LaporanIndex() {
-  const { siswas = [], tagihans = [], pembayarans = [], kategoris = [], sekolahList = [] } = usePage().props
-
-  const [activeTab, setActiveTab] = useState("per_siswa")
-
-  // filters
-  const [filterSekolah, setFilterSekolah] = useState("all")
-  const [filterKelas, setFilterKelas] = useState("all")
-  const [filterLokal, setFilterLokal] = useState("all")
-  const [search, setSearch] = useState("")
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
-  const [selectedKategori, setSelectedKategori] = useState("all")
-
-  // pagination
-  const [pagePerSiswa, setPagePerSiswa] = useState(1)
-  const pageSizePerSiswa = 10
-  const [pageTunggakan, setPageTunggakan] = useState(1)
-  const pageSizeTunggakan = 10
-
-  // template
-  const [templateType, setTemplateType] = useState("spp")
-
-  // === DERIVE OPTIONS ===
+  // Dependent options untuk Select kelas & lokal pada filter bar
   const kelasOptions = useMemo(() => {
-    const s = new Set(siswas.map((x) => x.kelas?.nama_kelas).filter(Boolean))
-    return Array.from(s)
-  }, [siswas])
+    if (filterSekolah === "all") return []
+    const s = (sekolahList || []).find(x => x.nama_sekolah === filterSekolah)
+    return (s?.kelas || []).map(k => k.nama_kelas)
+  }, [filterSekolah, sekolahList])
 
   const lokalOptions = useMemo(() => {
-    const s = new Set(siswas.map((x) => x.kelas?.lokal).filter(Boolean))
-    return Array.from(s)
-  }, [siswas])
+    if (filterSekolah === "all") return []
+    const s = (sekolahList || []).find(x => x.nama_sekolah === filterSekolah)
+    const set = new Set((s?.kelas || []).map(k => k.lokal).filter(Boolean))
+    return Array.from(set)
+  }, [filterSekolah, sekolahList])
 
-  // === FILTER SISWA ===
-  const filteredSiswa = useMemo(() => {
+  const formatRupiah = (n) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })
+      .format(Number(n || 0))
+
+  // Normalisasi rows agar aman: tanggal, nama kategori, jumlah
+  const normalized = useMemo(() => {
+    return (rows || []).map(r => ({
+      ...r,
+      tanggal: r.tanggal || r.tanggal_bayar || null,
+      jumlah: Number(r.jumlah ?? r.nominal ?? 0),
+      kategori: r.kategori || (r.kategori_nama ? { id: r.kategori_id, nama: r.kategori_nama } : null),
+      siswa: r.siswa || (r.siswa_nama ? { id: r.siswa_id, nama: r.siswa_nama } : null),
+      sekolah: r.sekolah || (r.sekolah_nama ? { id: r.sekolah_id, nama: r.sekolah_nama } : null),
+      kelas: r.kelas || (r.kelas_nama ? { id: r.kelas_id, nama: r.kelas_nama, lokal: r.lokal } : null),
+    }))
+  }, [rows])
+
+  // Client-side filtering
+  const filtered = useMemo(() => {
+    let data = normalized
+
+    // Tanggal (inklusif)
+    if (dateFrom) {
+      const from = new Date(dateFrom)
+      data = data.filter(r => r.tanggal && new Date(r.tanggal) >= from)
+    }
+    if (dateTo) {
+      const to = new Date(dateTo)
+      // tambah 1 hari agar inklusif harian
+      const toPlus = new Date(to)
+      toPlus.setDate(toPlus.getDate() + 1)
+      data = data.filter(r => r.tanggal && new Date(r.tanggal) < toPlus)
+    }
+
+    // Filter sekolah/kelas/lokal
+    if (filterSekolah !== "all") data = data.filter(r => r.sekolah?.nama === filterSekolah)
+    if (filterKelas !== "all")   data = data.filter(r => r.kelas?.nama === filterKelas)
+    if (filterLokal !== "all")   data = data.filter(r => (r.kelas?.lokal || "") === filterLokal)
+
+    // Filter kategori (berbasis id)
+    if (filterKategori !== "all" && filterKategori !== "") {
+      data = data.filter(r => String(r.kategori?.id || "") === String(filterKategori))
+    }
+
+    // Search
     const q = search.trim().toLowerCase()
-    return siswas.filter((s) => {
-      if (filterSekolah !== "all" && (s.sekolah?.nama_sekolah || "") !== filterSekolah) return false
-      if (filterKelas !== "all" && (s.kelas?.nama_kelas || "") !== filterKelas) return false
-      if (filterLokal !== "all" && (s.kelas?.lokal || "") !== filterLokal) return false
-
-      if (!q) return true
-      return (
-        (s.nama_siswa || "").toLowerCase().includes(q) ||
-        (s.kelas?.nama_kelas || "").toLowerCase().includes(q) ||
-        String(s.id).includes(q)
-      )
-    })
-  }, [siswas, filterSekolah, filterKelas, filterLokal, search])
-
-  // === MAP TAGIHAN PER SISWA ===
-  const siswaTagihanMap = useMemo(() => {
-    const map = {}
-    siswas.forEach((s) => {
-      map[s.id] = {}
-      kategoris.forEach((k) => {
-        const t = tagihans.find((tg) => tg.siswa_id === s.id && tg.kategori_id === k.id)
-        map[s.id][k.id] = t || null
+    if (q) {
+      data = data.filter(r => {
+        const s = (r.siswa?.nama || "").toLowerCase()
+        const k = (r.kategori?.nama || "").toLowerCase()
+        const ket = (r.keterangan || "").toLowerCase()
+        const kl = (r.kelas?.nama || "").toLowerCase()
+        const sk = (r.sekolah?.nama || "").toLowerCase()
+        return s.includes(q) || k.includes(q) || ket.includes(q) || kl.includes(q) || sk.includes(q)
       })
-    })
-    return map
-  }, [siswas, tagihans, kategoris])
-
-  // === FILTER PEMBAYARAN BY DATE ===
-  const filterPaymentsByDate = (items) => {
-    if (!dateFrom && !dateTo) return items
-    const from = dateFrom ? new Date(dateFrom) : null
-    const to = dateTo ? new Date(dateTo) : null
-    return items.filter((p) => {
-      const d = new Date(p.tanggal_bayar || p.created_at || p.tanggal || null)
-      if (!d || isNaN(d)) return false
-      if (from && d < from) return false
-      if (to && d > to) return false
-      return true
-    })
-  }
-
-  // === REKAP DATA ===
-  const rekapData = useMemo(() => {
-    const payments = filterPaymentsByDate(pembayarans || [])
-    const totals = {}
-    payments.forEach((p) => {
-      const d = new Date(p.tanggal_bayar || p.created_at || p.tanggal || null)
-      if (isNaN(d)) return
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-      totals[key] = (totals[key] || 0) + Number(p.nominal || 0)
-    })
-    return Object.keys(totals)
-      .map((k) => ({ period: k, total: totals[k] }))
-      .sort((a, b) => (a.period < b.period ? 1 : -1))
-  }, [pembayarans, dateFrom, dateTo])
-
-  // === TUNGGAKAN ===
-  const tunggakanList = useMemo(() => {
-    const rows = []
-    filteredSiswa.forEach((s) => {
-      const tList = (tagihans || []).filter((t) => t.siswa_id === s.id && Number(t.sisa_tagihan || 0) > 0)
-      if (tList.length > 0) {
-        rows.push({ siswa: s, tagihans: tList })
-      }
-    })
-    return rows
-  }, [filteredSiswa, tagihans])
-
-  // === FORMAT IDR ===
-  const fmtID = (n) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(
-      Number(n || 0)
-    )
-
-  // === EXPORT HANDLER ===
-  const handleExport = (type) => {
-    const params = {
-      sekolah: filterSekolah !== "all" ? filterSekolah : undefined,
-      kelas: filterKelas !== "all" ? filterKelas : undefined,
-      lokal: filterLokal !== "all" ? filterLokal : undefined,
-      kategori: selectedKategori !== "all" ? selectedKategori : undefined,
-      from: dateFrom || undefined,
-      to: dateTo || undefined,
-      q: search || undefined,
-      format: "csv",
     }
 
-    const routeName =
-      type === "per_siswa"
-        ? "laporan.per_siswa.export"
-        : type === "rekap"
-        ? "laporan.rekap.export"
-        : type === "tunggakan"
-        ? "laporan.tunggakan.export"
-        : "laporan.template.export"
+    return data
+  }, [normalized, dateFrom, dateTo, filterSekolah, filterKelas, filterLokal, filterKategori, search])
 
-    try {
-      router.visit(routeHelper(routeName, params), { method: "get", preserveScroll: true })
-    } catch (err) {
-      console.error("Export failed", err)
-    }
-  }
+  // Ringkasan total nominal (untuk header)
+  const totalNominal = useMemo(() => filtered.reduce((a, b) => a + (b.jumlah || 0), 0), [filtered])
 
-  // reset pagination on filters
+  // Pagination state untuk tabel di bawah
+  const [page, setPage] = useState(1)
+  const perPage = 20
   useEffect(() => {
-    setPagePerSiswa(1)
-    setPageTunggakan(1)
-  }, [filterSekolah, filterKelas, filterLokal, search, dateFrom, dateTo, selectedKategori])
+    setPage(1)
+  }, [filterSekolah, filterKelas, filterLokal, filterKategori, dateFrom, dateTo, search])
 
-  // pagination helpers
-  const paginatedSiswa = useMemo(() => {
-    const start = (pagePerSiswa - 1) * pageSizePerSiswa
-    return filteredSiswa.slice(start, start + pageSizePerSiswa)
-  }, [filteredSiswa, pagePerSiswa])
+  // =======================
+  // MODE 1: PIVOT (ALL CAT)
+  // =======================
+  const CATEGORY_ORDER = useMemo(() => ([
+    { key: "uang_masuk",   label: "Uang Masuk",   match: (n) => /uang\s*masuk/i.test(n) },
+    { key: "daftar_ulang", label: "Daftar Ulang", match: (n) => /daftar\s*ulang/i.test(n) },
+    { key: "spp",          label: "SPP",          match: (n) => /^spp$/i.test(n) || /\bspp\b/i.test(n) },
+    { key: "sosial",       label: "Sosial",       match: (n) => /sosial/i.test(n) },
+    { key: "antar_jemput", label: "Antar Jemput", match: (n) => /antar\s*jemput/i.test(n) },
+    { key: "buku_paket",   label: "Buku Paket",   match: (n) => /buku\s*paket/i.test(n) },
+    { key: "makan_siang",  label: "Makan Siang",  match: (n) => /makan\s*siang/i.test(n) },
+  ]), [])
 
-  const totalPagesPerSiswa = useMemo(
-    () => Math.max(1, Math.ceil(filteredSiswa.length / pageSizePerSiswa)),
-    [filteredSiswa]
-  )
+  const slotByKategoriId = useMemo(() => {
+    const m = new Map()
+    ;(kategoriList || []).forEach(k => {
+      const name = String(k.nama_kategori || "")
+      const slot = CATEGORY_ORDER.findIndex(s => s.match(name))
+      if (slot >= 0) m.set(String(k.id), CATEGORY_ORDER[slot].key)
+    })
+    return m
+  }, [kategoriList, CATEGORY_ORDER])
 
-  const paginatedTunggakan = useMemo(() => {
-    const start = (pageTunggakan - 1) * pageSizeTunggakan
-    return tunggakanList.slice(start, start + pageSizeTunggakan)
-  }, [tunggakanList, pageTunggakan])
+  const pivotRows = useMemo(() => {
+    if (filterKategori !== "all" && filterKategori !== "") return [] // bukan mode pivot
+    const map = new Map()
+    for (const r of filtered) {
+      const sid = r.siswa?.id
+      if (!sid) continue
+      if (!map.has(sid)) {
+        map.set(sid, {
+          siswa: {
+            id: sid,
+            nama: r.siswa?.nama || "-",
+            sekolah: r.sekolah?.nama || "",
+            kelas: r.kelas?.nama || "",
+            lokal: r.kelas?.lokal || "",
+          },
+          cols: {
+            uang_masuk: 0, daftar_ulang: 0, spp: 0, sosial: 0, antar_jemput: 0, buku_paket: 0, makan_siang: 0,
+          },
+          total: 0,
+        })
+      }
+      const row = map.get(sid)
+      const catId = String(r.kategori?.id || "")
+      const slotKey = slotByKategoriId.get(catId)
+      const amount = Number(r.jumlah || 0)
+      if (slotKey) {
+        row.cols[slotKey] += amount
+        row.total += amount
+      }
+    }
+    // Hanya siswa yang punya nilai > 0
+    return Array.from(map.values()).filter(r => r.total > 0)
+  }, [filtered, slotByKategoriId, filterKategori])
 
-  const totalPagesTunggakan = useMemo(
-    () => Math.max(1, Math.ceil(tunggakanList.length / pageSizeTunggakan)),
-    [tunggakanList]
-  )
+  const pivotFooter = useMemo(() => {
+    const f = CATEGORY_ORDER.reduce((acc, s) => ({ ...acc, [s.key]: 0 }), {})
+    let total = 0
+    for (const r of pivotRows) {
+      CATEGORY_ORDER.forEach(s => { f[s.key] += r.cols[s.key] || 0 })
+      total += r.total || 0
+    }
+    return { byCol: f, total }
+  }, [pivotRows, CATEGORY_ORDER])
+
+  // Pagination utk pivot/detail
+  const isPivot = (filterKategori === "all" || filterKategori === "")
+  const totalRows = isPivot ? pivotRows.length : filtered.length
+  const totalPages = Math.max(1, Math.ceil(totalRows / perPage))
+  const currentPage = Math.min(page, totalPages)
+  const pageOffset = (currentPage - 1) * perPage
+  const pageNumbers = useMemo(() => {
+    const total = totalPages, curr = currentPage
+    const range = []
+    const start = Math.max(1, curr - 2)
+    const end   = Math.min(total, curr + 2)
+    for (let i = start; i <= end; i++) range.push(i)
+    if (!range.includes(1)) range.unshift(1, "start-ellipsis")
+    if (!range.includes(total)) range.push("end-ellipsis", total)
+    return range
+  }, [currentPage, totalPages])
+
+  const pageData = useMemo(() => {
+    const data = isPivot ? pivotRows : filtered
+    return data.slice(pageOffset, pageOffset + perPage)
+  }, [isPivot, pivotRows, filtered, pageOffset, perPage])
+
+  // Apply filter ke server (opsional)
+  const applyServer = () => {
+    router.get(route("laporan.perkategori.index"), {
+      sekolah: filterSekolah,
+      kelas: filterKelas,
+      lokal: filterLokal,
+      kategori: filterKategori,
+      from: dateFrom,
+      to: dateTo,
+      search,
+    }, { preserveScroll: true, preserveState: true })
+  }
 
   return (
     <AuthenticatedLayout
       header={
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold">Laporan</h1>
-          <p className="text-sm text-muted-foreground">Lihat rekap, tagihan & riwayat pembayaran siswa</p>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold">Laporan Per Kategori</h1>
+          <p className="text-sm text-muted-foreground">Rekap dan detail transaksi dari Pembayaran, bisa pivot per siswa atau per kategori.</p>
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* Tabs selector */}
-        <div className="flex gap-2">
-          <Button variant={activeTab === "per_siswa" ? "default" : "ghost"} onClick={() => setActiveTab("per_siswa")}>
-            Per Siswa
-          </Button>
-          <Button variant={activeTab === "rekap" ? "default" : "ghost"} onClick={() => setActiveTab("rekap")}>
-            Rekap Keuangan
-          </Button>
-          <Button variant={activeTab === "tunggakan" ? "default" : "ghost"} onClick={() => setActiveTab("tunggakan")}>
-            Tunggakan
-          </Button>
-          <Button variant={activeTab === "template" ? "default" : "ghost"} onClick={() => setActiveTab("template")}>
-            Template Excel
-          </Button>
-          <div className="ml-auto flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setDateFrom("")
-                setDateTo("")
-                setSearch("")
-                setFilterSekolah("all")
-                setFilterKelas("all")
-                setFilterLokal("all")
-              }}
-            >
-              Reset Filters
-            </Button>
-            <Button size="sm" onClick={() => handleExport(activeTab)}>
-              Export CSV
-            </Button>
-          </div>
-        </div>
-
-        {/* Shared Filter */}
-        <FiltersComponent
+      <div className="grid gap-4">
+        <FiltersCard
           sekolahList={sekolahList}
+          kategoriList={kategoriList}
           kelasOptions={kelasOptions}
           lokalOptions={lokalOptions}
-          filterSekolah={filterSekolah}
-          setFilterSekolah={setFilterSekolah}
-          filterKelas={filterKelas}
-          setFilterKelas={setFilterKelas}
-          filterLokal={filterLokal}
-          setFilterLokal={setFilterLokal}
-          dateFrom={dateFrom}
-          setDateFrom={setDateFrom}
-          dateTo={dateTo}
-          setDateTo={setDateTo}
-          search={search}
-          setSearch={setSearch}
+          filterSekolah={filterSekolah} setFilterSekolah={setFilterSekolah}
+          filterKelas={filterKelas} setFilterKelas={setFilterKelas}
+          filterLokal={filterLokal} setFilterLokal={setFilterLokal}
+          filterKategori={filterKategori} setFilterKategori={setFilterKategori}
+          dateFrom={dateFrom} setDateFrom={setDateFrom}
+          dateTo={dateTo} setDateTo={setDateTo}
+          search={search} setSearch={setSearch}
+          onApplyServer={applyServer}
         />
 
-        {/* Tabs content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="per_siswa">
-            <PerSiswaSection
-              filteredCount={filteredSiswa.length}
-              paginatedSiswa={paginatedSiswa}
-              pagePerSiswa={pagePerSiswa}
-              setPagePerSiswa={setPagePerSiswa}
-              totalPagesPerSiswa={totalPagesPerSiswa}
-              pageSizePerSiswa={10}
-              selectedKategori={selectedKategori}
-              setSelectedKategori={setSelectedKategori}
-              kategoris={kategoris}
-              fmtID={fmtID}
-              tagihans={tagihans}
-              pembayarans={pembayarans}
-              filterPaymentsByDate={filterPaymentsByDate}
-              handleExport={handleExport}
-            />
-          </TabsContent>
 
-          <TabsContent value="rekap">
-            <RekapSection rekapData={rekapData} fmtID={fmtID} handleExport={handleExport} />
-          </TabsContent>
 
-          <TabsContent value="tunggakan">
-            <TunggakanSection
-              paginatedTunggakan={paginatedTunggakan}
-              totalPagesTunggakan={totalPagesTunggakan}
-              pageTunggakan={pageTunggakan}
-              setPageTunggakan={setPageTunggakan}
-              fmtID={fmtID}
-              router={router}
-              routeHelper={routeHelper}
-            />
-          </TabsContent>
+        {/* ===================== */}
+        {/* TABEL: PIVOT vs DETAIL */}
+        {/* ===================== */}
+        {isPivot ? (
+          // PIVOT
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>Rekap Per Siswa (Semua Kategori)</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                Total siswa tampil: {pivotRows.length} • Total nominal: {formatRupiah(pivotFooter.total)}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Nama Siswa</TableHead>
+                      {CATEGORY_ORDER.map(s => (
+                        <TableHead key={s.key} className="whitespace-nowrap">{s.label}</TableHead>
+                      ))}
+                      <TableHead className="text-right whitespace-nowrap">Jumlah</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageData.length ? pageData.map((r, i) => (
+                      <TableRow key={r.siswa.id}>
+                        <TableCell>{pageOffset + i + 1}</TableCell>
+                        <TableCell className="min-w-[220px]">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{r.siswa.nama}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {r.siswa.sekolah ? `${r.siswa.sekolah} • ` : ""}{r.siswa.kelas || "-"}{r.siswa.lokal ? ` • ${r.siswa.lokal}` : ""}
+                            </span>
+                          </div>
+                        </TableCell>
+                        {CATEGORY_ORDER.map(s => (
+                          <TableCell key={s.key} className="text-right">
+                            {r.cols[s.key] ? formatRupiah(r.cols[s.key]) : "-"}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-semibold">{formatRupiah(r.total)}</TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={2 + CATEGORY_ORDER.length + 1} className="text-center">
+                          Tidak ada data untuk filter ini
+                        </TableCell>
+                      </TableRow>
+                    )}
 
-          <TabsContent value="template">
-            <TemplateExcelSection
-              templateType={templateType}
-              setTemplateType={setTemplateType}
-              filteredSiswa={filteredSiswa}
-              fmtID={fmtID}
-              tagihans={tagihans}
-              pembayarans={pembayarans}
-            />
-          </TabsContent>
-        </Tabs>
+                    {/* Footer total */}
+                    {pivotRows.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-right font-semibold">Jumlah Keseluruhan</TableCell>
+                        {CATEGORY_ORDER.map(s => (
+                          <TableCell key={`ft-${s.key}`} className="text-right font-semibold">
+                            {pivotFooter.byCol[s.key] ? formatRupiah(pivotFooter.byCol[s.key]) : "-"}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-extrabold">{formatRupiah(pivotFooter.total)}</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          aria-disabled={currentPage <= 1}
+                          className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                      {pageNumbers.map((p, i) =>
+                        typeof p === "number" ? (
+                          <PaginationItem key={p}>
+                            <PaginationLink isActive={p === currentPage} onClick={() => setPage(p)}>{p}</PaginationLink>
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={`${p}-${i}`}><PaginationEllipsis /></PaginationItem>
+                        )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          aria-disabled={currentPage >= totalPages}
+                          className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          // DETAIL PER KATEGORI
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>Detail Transaksi (Per Kategori)</CardTitle>
+              <div className="flex gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Total data: {filtered.length} • Total nominal: {formatRupiah(totalNominal)}
+                </div>
+                <Button variant="outline" onClick={applyServer}>Terapkan di Server</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Nama Siswa</TableHead>
+                      <TableHead>Sekolah</TableHead>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Lokal</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageData.length ? pageData.map((r, i) => (
+                      <TableRow key={`${r.id}-${i}`}>
+                        <TableCell>{pageOffset + i + 1}</TableCell>
+                        <TableCell className="whitespace-nowrap">{r.tanggal || "-"}</TableCell>
+                        <TableCell>{r.siswa?.nama || "-"}</TableCell>
+                        <TableCell>{r.sekolah?.nama || "-"}</TableCell>
+                        <TableCell>{r.kelas?.nama || "-"}</TableCell>
+                        <TableCell>{r.kelas?.lokal || "-"}</TableCell>
+                        <TableCell>{r.kategori?.nama || "-"}</TableCell>
+                        <TableCell className="text-right">{formatRupiah(r.jumlah)}</TableCell>
+                        <TableCell className="max-w-[260px] truncate" title={r.keterangan || ""}>
+                          {r.keterangan || "-"}
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center">Tidak ada data untuk filter ini</TableCell>
+                      </TableRow>
+                    )}
+
+                    {/* Footer total */}
+                    {filtered.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-right font-semibold">Jumlah Keseluruhan</TableCell>
+                        <TableCell className="text-right font-extrabold">{formatRupiah(totalNominal)}</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          aria-disabled={currentPage <= 1}
+                          className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                      {pageNumbers.map((p, i) =>
+                        typeof p === "number" ? (
+                          <PaginationItem key={p}>
+                            <PaginationLink isActive={p === currentPage} onClick={() => setPage(p)}>{p}</PaginationLink>
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={`${p}-${i}`}><PaginationEllipsis /></PaginationItem>
+                        )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          aria-disabled={currentPage >= totalPages}
+                          className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AuthenticatedLayout>
   )
