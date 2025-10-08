@@ -155,7 +155,13 @@ export default function KelasIndex() {
   }
 
   return (
-    <AuthenticatedLayout>
+    <AuthenticatedLayout
+          header={
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold">Master Data kelas</h1>
+          <p className="text-sm text-muted-foreground">Kelola data siswa berdasarkan sekolah, kelas, dan lokal.</p>
+        </div>
+      }>
       <main className="p-4 md:p-6">
         <Card>
           <CardHeader className="flex flex-col gap-3">

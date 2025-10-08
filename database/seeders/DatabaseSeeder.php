@@ -18,10 +18,10 @@ class DatabaseSeeder extends Seeder
     {
         // === USER ADMIN ===
         User::updateOrCreate(
-            ['email' => 'admin@gmail.com'],
+            ['email' => 'admin@example.com'],
             [
-                'name' => 'Administrator',
-                'password' => Hash::make('123'),
+                'name' => 'Administrator ',
+                'password' => Hash::make('qwerty_eljufa'),
             ]
         );
 
@@ -205,32 +205,7 @@ foreach ($tkSiswaList as $nama) {
 }
 
 
-        // === TAGIHAN & PEMBAYARAN DEMO ===
-        foreach ($siswaList as $siswa) {
-            $tagihan = Tagihan::create([
-                'siswa_id' => $siswa->id,
-                'kelas_id' => $siswa->kelas_id,
-                'kategori_id' => $sppKategori->id,
-                'total_tagihan' => 1000000,
-                'sisa_tagihan' => 1000000,
-                'status' => 'belum_lunas',
-            ]);
-
-            // Contoh pembayaran
-            Pembayaran::create([
-                'tagihan_id' => $tagihan->id,
-                'tanggal_bayar' => now(),
-                'nominal' => 250000,
-                'metode' => 'Tunai',
-            ]);
-
-            // Update tagihan
-            $tagihan->sisa_tagihan -= 250000;
-            if ($tagihan->sisa_tagihan <= 0) {
-                $tagihan->status = 'lunas';
-            }
-            $tagihan->save();
-        }
+  
     }
 }
 

@@ -115,24 +115,15 @@ export default function DashboardPage(props) {
   return (
     <AuthenticatedLayout
       user={props.auth?.user}
-      header={<h2 className="text-xl font-semibold leading-tight">Dashboard Keuangan Sekolah</h2>}
+            header={
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold">Dashboard Keuangan Sekolah</h1>
+          <p className="text-sm text-muted-foreground"> Ringkasan pembayaran, status tagihan, dan performa bulanan..</p>
+        </div>
+      }
     >
       <Head title="Dashboard" />
-
       <main className="mx-auto max-w-[1200px] px-4 py-6">
-        {/* Header actions */}
-        <section className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Ringkasan pembayaran, status tagihan, dan performa bulanan.
-          </p>
-          <div className="flex items-center gap-2">
-            
-            {/* <Button className="gap-2">
-              <TrendingUp className="h-4 w-4" /> Lihat Insight
-            </Button> */}
-          </div>
-        </section>
-
         {/* Stat cards */}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard title="Siswa Bayar (Hari Ini)" value={stats.today_siswa ?? 0} icon={<Users className="h-5 w-5" />} pill="Hari ini" tone="info" />

@@ -74,7 +74,13 @@ const onDelete = (id) => {
 
 
   return (
-    <AuthenticatedLayout className="p-4 md:p-6">
+    <AuthenticatedLayout className="p-4 md:p-6"
+          header={
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold">Master Data Sekolah</h1>
+          <p className="text-sm text-muted-foreground">Kelola data siswa berdasarkan sekolah, kelas, dan lokal.</p>
+        </div>
+      }>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-balance">Master Data Sekolah</CardTitle>

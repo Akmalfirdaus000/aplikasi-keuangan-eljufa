@@ -76,8 +76,17 @@ export default function KategoriIndex() {
   }
 
   return (
-    <AuthenticatedLayout>
+    <AuthenticatedLayout
+          header={
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold">Master Data kategori</h1>
+          <p className="text-sm text-muted-foreground">Kelola data kategori keuangan.</p>
+        </div>
+      }>
+          {/* <Head title="Kategoris" /> */}
+
       <main className="p-4 md:p-6">
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Master Data Kategori</CardTitle>
