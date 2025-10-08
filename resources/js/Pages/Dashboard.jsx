@@ -126,12 +126,10 @@ export default function DashboardPage(props) {
             Ringkasan pembayaran, status tagihan, dan performa bulanan.
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" className="gap-2">
-              <Download className="h-4 w-4" /> Ekspor
-            </Button>
-            <Button className="gap-2">
+            
+            {/* <Button className="gap-2">
               <TrendingUp className="h-4 w-4" /> Lihat Insight
-            </Button>
+            </Button> */}
           </div>
         </section>
 

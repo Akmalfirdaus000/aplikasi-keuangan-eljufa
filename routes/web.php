@@ -138,7 +138,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // routes/web.php
-Route::get('/laporan/per-kategori', [\App\Http\Controllers\LaporanController::class, 'index'])
+Route::get('/laporan/per-kategori', [LaporanController::class, 'index'])
     ->name('laporan.perkategori.index');
     Route::get('/laporan/export-excel', [LaporanController::class, 'exportExcel'])->name('laporan.export.excel');
 Route::get('/laporan/export-pdf',   [LaporanController::class, 'exportPdf'])->name('laporan.export.pdf');
