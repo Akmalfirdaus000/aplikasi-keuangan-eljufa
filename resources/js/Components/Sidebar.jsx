@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Link, usePage } from "@inertiajs/react"
+import { Link, usePage, router } from "@inertiajs/react"
 import { route } from "ziggy-js"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -45,13 +45,12 @@ export default function Sidebar() {
   const { url, auth } = usePage()
   const user = auth?.user ?? { name: "Guest", email: "guest@example.com" }
 
-  // Desktop collapse state + CSS var sink
+  // Collapse desktop + sink ke CSS var agar layout bisa menyesuaikan (jika dipakai)
   const [collapsed, setCollapsed] = useState(false)
   useEffect(() => {
     const saved = localStorage.getItem("sidebar_collapsed")
     const isCollapsed = saved === "1"
     setCollapsed(isCollapsed)
-    // set CSS var on first paint
     document.documentElement.style.setProperty("--sbw", isCollapsed ? "4rem" : "16rem")
   }, [])
   useEffect(() => {
@@ -59,12 +58,14 @@ export default function Sidebar() {
     document.documentElement.style.setProperty("--sbw", collapsed ? "4rem" : "16rem")
   }, [collapsed])
 
-  // Mobile sheet
+  // Sheet (mobile)
   const [openMobile, setOpenMobile] = useState(false)
 
+  // Submenu open map
   const [openMenus, setOpenMenus] = useState({})
   const toggleMenu = (name) => setOpenMenus((p) => ({ ...p, [name]: !p[name] }))
 
+  // Menus
   const menus = useMemo(() => [
     { name: "Dashboard", icon: Home, route: "dashboard" },
     {
@@ -88,29 +89,34 @@ export default function Sidebar() {
     { name: "Laporan", icon: FileText, route: "laporan.index" },
   ], [])
 
+  // ====== Item renderers (ikon konsisten) ======
+  const IconBox = ({ Icon, className }) => (
+    <Icon className={cx("h-5 w-5 shrink-0", className)} />
+  )
+
   const MenuItem = ({ icon: Icon, active, children, collapsed }) => (
     <div
       className={cx(
-        "flex items-center rounded-md px-3 py-2 text-sm",
+        "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
         active ? "bg-indigo-100 text-indigo-700 font-medium" : "text-gray-700 hover:bg-indigo-50",
-        collapsed && "justify-center"
+        collapsed ? "justify-center gap-0" : "gap-3"
       )}
       title={collapsed ? children : undefined}
     >
-      <Icon size={18} className={cx(!collapsed && "mr-2")} />
-      {!collapsed && <span className="truncate">{children}</span>}
+      <IconBox Icon={Icon} />
+      {!collapsed && <span className="truncate leading-none">{children}</span>}
     </div>
   )
 
   const SubItem = ({ icon: Icon, active, children }) => (
     <div
       className={cx(
-        "flex items-center gap-2 rounded-md px-3 py-2 text-sm",
+        "flex items-center rounded-md px-3 py-2 text-sm gap-3",
         active ? "bg-indigo-100 text-indigo-700 font-medium" : "text-gray-600 hover:bg-indigo-50"
       )}
     >
-      {Icon && <Icon size={16} className="shrink-0" />}
-      <span className="truncate">{children}</span>
+      {Icon && <IconBox Icon={Icon} />}
+      <span className="truncate leading-none">{children}</span>
     </div>
   )
 
@@ -119,6 +125,8 @@ export default function Sidebar() {
       <nav className={cx("p-2 space-y-1", collapsed && !isMobile && "px-1")}>
         {menus.map((m, i) => {
           const Icon = m.icon
+
+          // Single item
           if (!m.subMenu) {
             const active = isRouteActive(url, m.route)
             const item = (
@@ -133,24 +141,26 @@ export default function Sidebar() {
             )
           }
 
+          // Dengan submenu
           const open = !!openMenus[m.name]
+          const showCaret = !(collapsed && !isMobile)
+
           return (
             <div key={i}>
               <button
                 type="button"
                 onClick={() => toggleMenu(m.name)}
                 className={cx(
-                  "flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-indigo-50 rounded-md",
-                  collapsed && !isMobile && "justify-center px-2"
+                  "flex items-center w-full rounded-md px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-indigo-50 transition-colors",
+                  collapsed && !isMobile ? "justify-center gap-0" : "justify-between gap-3"
                 )}
                 title={collapsed && !isMobile ? m.name : undefined}
               >
-                <span className="flex items-center">
-                  <Icon size={18} className={cx(!(collapsed && !isMobile) && "mr-2")} />
+                <span className={cx("flex items-center", collapsed && !isMobile ? "gap-0" : "gap-3")}>
+                  <IconBox Icon={Icon} />
                   {!(collapsed && !isMobile) && <span className="truncate">{m.name}</span>}
                 </span>
-                {!(collapsed && !isMobile) &&
-                  (open ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                {showCaret && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
               </button>
 
               {open && (
@@ -178,24 +188,29 @@ export default function Sidebar() {
     </ScrollArea>
   )
 
+  // ====== User dropdown (dengan Logout) ======
+  const onLogout = () => router.post(route("logout"))
+
   const UserDropdown = () => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={cx("w-full flex items-center gap-2 rounded-md p-2 hover:bg-gray-100",
-            collapsed ? "justify-center" : "justify-start")}
+          className={cx(
+            "w-full flex items-center gap-3 rounded-md p-2 hover:bg-gray-100 transition-colors",
+            collapsed ? "justify-center" : "justify-start"
+          )}
           title={collapsed ? user.name : undefined}
         >
           <img
             src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "Guest")}&background=random`}
             alt={user.name}
-            className="w-8 h-8 rounded-full"
+            className="w-8 h-8 rounded-full shrink-0"
           />
           {!collapsed && (
             <>
               <div className="flex flex-col text-left">
-                <span className="text-sm font-medium">{user.name}</span>
-                <span className="text-xs text-gray-500">{user.email}</span>
+                <span className="text-sm font-medium leading-tight">{user.name}</span>
+                <span className="text-xs text-gray-500 leading-tight">{user.email}</span>
               </div>
               <ChevronDown className="ml-auto w-4 h-4 text-gray-400" />
             </>
@@ -208,14 +223,16 @@ export default function Sidebar() {
         <DropdownMenuItem className="gap-2"><Billing size={16} /> Billing</DropdownMenuItem>
         <DropdownMenuItem className="gap-2"><Bell size={16} /> Notifications</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2 text-red-600"><LogOut size={16} /> Log out</DropdownMenuItem>
+        <DropdownMenuItem className="gap-2 text-red-600" onSelect={onLogout}>
+          <LogOut size={16} /> Log out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 
   return (
     <>
-      {/* Mobile topbar */}
+      {/* Topbar (mobile) */}
       <div className="md:hidden sticky top-0 z-40 w-full border-b bg-white">
         <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-2">
@@ -230,18 +247,23 @@ export default function Sidebar() {
                   <SheetTitle>Aplikasi Keuangan</SheetTitle>
                 </SheetHeader>
                 {renderTree(true)}
-                <div className="p-3 border-t"><UserDropdown /></div>
+                <div className="p-3 border-t">
+                  <UserDropdown />
+                  <Button variant="ghost" className="mt-2 w-full justify-start gap-3 text-red-600" onClick={onLogout}>
+                    <LogOut className="h-5 w-5" /> Keluar
+                  </Button>
+                </div>
               </SheetContent>
             </Sheet>
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-indigo-600">Aplikasi Keuangan</span>
-              <span className="text-xs text-gray-500">Enterprise</span>
+              <span className="text-xs text-gray-500">Yayasn El-jufa</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Desktop sidebar */}
+      {/* Sidebar Desktop */}
       <aside
         className={cx(
           "hidden md:flex fixed top-0 left-0 h-screen border-r bg-white z-30 transition-[width] duration-200",
@@ -249,11 +271,12 @@ export default function Sidebar() {
         )}
       >
         <div className="flex h-full w-full flex-col">
+          {/* Header */}
           <div className={cx("flex items-center border-b", collapsed ? "px-2 py-3" : "px-4 py-3")}>
             {!collapsed ? (
               <div className="mr-2">
                 <div className="text-base font-bold text-indigo-600">Aplikasi Keuangan</div>
-                <div className="text-[11px] text-gray-500">Enterprise</div>
+                <div className="text-[11px] text-gray-500">Yayasan El-jufa</div>
               </div>
             ) : (
               <div className="text-indigo-600 font-bold text-lg">AK</div>
@@ -262,7 +285,7 @@ export default function Sidebar() {
               size="icon"
               variant="ghost"
               className={cx("ml-auto", collapsed && "mx-auto")}
-              onClick={() => setCollapsed((v) => !v)}
+              onClick={() => setCollapsed(v => !v)}
               aria-label="Collapse sidebar"
               title={collapsed ? "Expand" : "Collapse"}
             >
@@ -270,8 +293,13 @@ export default function Sidebar() {
             </Button>
           </div>
 
+          {/* Body */}
           {renderTree(false)}
-          <div className="p-3 border-t"><UserDropdown /></div>
+
+          {/* Footer user */}
+          <div className="p-3 border-t">
+            <UserDropdown />
+          </div>
         </div>
       </aside>
     </>

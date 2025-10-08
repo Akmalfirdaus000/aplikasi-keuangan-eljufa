@@ -25,7 +25,11 @@ export default function FiltersCardKategori({
       <CardHeader>
         <CardTitle>Filter</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-7 gap-3">
+      <CardContent className="grid  md:grid-cols-4 gap-3">
+           <div>
+          <Label>Cari</Label>
+          <Input placeholder="Nama siswa..." value={search} onChange={(e)=>setSearch(e.target.value)} />
+        </div>
         <div>
           <Label>Sekolah</Label>
           <Select value={filterSekolah} onValueChange={(v)=>{setFilterSekolah(v); setFilterKelas("all"); setFilterLokal("all")}}>
@@ -84,14 +88,9 @@ export default function FiltersCardKategori({
           <Input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} />
         </div>
 
-        <div>
-          <Label>Cari</Label>
-          <Input placeholder="Nama siswa, kategori, kelas..." value={search} onChange={(e)=>setSearch(e.target.value)} />
-        </div>
+     
 
-        <div className="md:col-span-7 flex justify-end">
-          <Button variant="outline" onClick={onApplyServer}>Terapkan di Server</Button>
-        </div>
+
       </CardContent>
     </Card>
   )
