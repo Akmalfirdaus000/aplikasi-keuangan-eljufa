@@ -5,18 +5,25 @@
 
     // ===== Data kop (fallback jika tidak dikirim dari controller) =====
     $kop = $kop ?? [
-        'nama_yayasan' => 'YAYASAN EL-JUFA LEGUM',
-        'nama_sekolah' => 'SEKOLAH SD–TK EL-JUFA',
-        'alamat'       => 'Komplek Pendidikan Yayasan El-Jufa Legum, Jorong Taratak Galundi, Kec. Lembah Gumanti, Kab. Solok',
-        'kontak'       => 'HP. 082269430499',
-        'kepala'       => 'Junsel Friade Alstra, SH.I., M.H.',
-        'nip'          => 'NIP. 1234567890',
-        'kota'         => 'Kab. Solok',
-        'logo_kiri'    => 'logo-kop-eljufa.png',
-        'logo_kanan'   => 'logo-kop-2.JPEG',
+        'nama_yayasan'   => 'YAYASAN EL-JUFA LEGUM',
+        'nama_sekolah'   => 'SEKOLAH SD–TK EL-JUFA',
+        'alamat'         => 'Alamat: Komplek Pendidikan Yayasan El-Jufa Legum, Jorong Taratak Galundi, Kec. Lembah Gumanti, Kab. Solok',
+        'kontak'         => 'HP. 082269430499',
+        'kepala'         => 'Dr. JUNSEL FRIADE ALSTRA, S.H.I., M.H.',
+        'nip'            => 'NIP. 1234567890',
+        'kota'           => 'Alahan Panjang',
+        'logo_kiri'      => 'logo-kop-eljufa.png',
+        'logo_kanan'     => '',
+
+        // >>> Tambahan untuk blok tanda tangan
+        'pengelola_jabatan' => 'Pengelola Keuangan',
+        'pengelola_nama'    => ' Elvira Diana S, M.Pd',
+        'pengelola_nip'     => 'NIP. 123456789',
+        // Jika ingin label kanan selain “Mengetahui, Kepala Sekolah”, bisa override:
+        'mengetahui_label'  => 'Mengetahui, Ketua Yayasan',
     ];
 
-    // ===== Pastikan path logo absolut (Dompdf butuh path file sistem yg valid) =====
+    // ===== Pastikan path logo absolut (Dompdf butuh path file sistem yang valid) =====
     $tryPath = function ($p) {
         if (!$p) return null;
         if (is_file($p)) return $p;
@@ -39,7 +46,7 @@
         /* ===== Base ===== */
         * { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11px; }
         h1 { font-size: 16px; margin: 0 0 8px; }
-        .muted { color: #374151; } /* abu-abu gelap agar tetap jelas saat print */
+        .muted { color: #374151; }
         .mb-2 { margin-bottom: 8px; }
         .mb-3 { margin-bottom: 12px; }
         .mb-4 { margin-bottom: 16px; }
@@ -61,8 +68,8 @@
         .kop-table  { width:100%; border-collapse:collapse; }
         .kop-table td { border:none !important; vertical-align:middle; }
 
-        .logo-box   { width: 130px; } /* lebar tetap agar kiri & kanan seimbang */
-        .logo-img   { height: 95px; width:auto; object-fit: contain; } /* logo besar & proporsional */
+        .logo-box   { width: 130px; }
+        .logo-img   { height: 95px; width:auto; object-fit: contain; }
 
         .kop-center { text-align:center; }
         .kop-left   { text-align:left; }
@@ -75,6 +82,21 @@
 
         .kop-hr-1   { border:0; border-top:3px solid #000; margin: 6px 0 2px; }
         .kop-hr-2   { border:0; border-top:1px solid #000; margin: 0 0 14px; }
+
+        /* ===== Signature block ===== */
+        .sign-table { width:100%; border-collapse:collapse; }
+        .sign-table td { border:none !important; vertical-align:top; }
+        .sign-box   { width:50%; }
+        .sign-gap   { height: 70px; } /* ruang untuk tanda tangan */
+        .uline      { text-decoration: underline; }
+        .fw-bold    { font-weight: 700; }
+         .sign-table   { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .sign-table td{ border:none !important; vertical-align:top; }
+  .sign-role    { font-weight:600; margin-bottom:6px; }
+  .sign-space   { height:80px; }       /* ruang untuk paraf/tanda tangan */
+  .sign-name    { text-decoration:underline; font-weight:700; display:inline-block; }
+  .sign-meta    { margin-top:4px; }
+  .text-center  { text-align:center; }
     </style>
 </head>
 <body>
@@ -91,7 +113,6 @@
 
                 <td class="kop-center">
                     <div class="kop-title-1">{{ $kop['nama_yayasan'] }}</div>
-                    {{-- Baris tengah opsional, sesuaikan kebutuhan --}}
                     <div class="kop-title-2">KENAGARIAN ALAHAN PANJANG</div>
                     <div class="kop-title-3">KEC. LEMBAH GUMANTI {{ strtoupper($kop['kota'] ?? 'KAB. SOLOK') }}</div>
                     <div class="kop-sub">
@@ -129,12 +150,10 @@
     {{-- ======================== --}}
     @if ($isPivot)
         @php
-            // Pastikan kategoriList berupa array seragam
             $cats = collect($kategoriList);
             $catNames = $cats->pluck('nama_kategori')->values();
 
-            // Susun pivot per siswa
-            $pivot = []; // [siswa_id => ['siswa'=>[], 'bycat'=>[nama=>nominal], 'total'=>int]]
+            $pivot = [];
             foreach ($rows as $r) {
                 $sid = $r['siswa']['id'] ?? null;
                 if (!$sid) continue;
@@ -158,7 +177,6 @@
                 $pivot[$sid]['total'] += $amt;
             }
 
-            // Footer total kategori & grand total
             $footer = [];
             foreach ($catNames as $cn) { $footer[$cn] = 0; }
             $grand = 0;
@@ -268,18 +286,41 @@
         </table>
     @endif
 
-    {{-- ========== TANDA TANGAN ========== --}}
-    <table class="no-border" style="margin-top: 32px;">
-        <tr>
-            <td style="width:60%;"></td>
-            <td class="text-center">
-                {{ $kop['kota'] }}, {{ now()->translatedFormat('d F Y') }}<br>
-                Kepala Sekolah,<br><br><br><br>
-                <u><strong>{{ $kop['kepala'] }}</strong></u><br>
-                {{ $kop['nip'] }}
-            </td>
-        </tr>
-    </table>
+    {{-- ========== TANDA TANGAN (2 kolom) ========== --}}
+  {{-- ========== TANDA TANGAN (2 kolom rapi) ========== --}}
+<table class="no-border sign-table" style="margin-top:28px;">
+  <colgroup>
+    <col style="width:45%;">
+    <col style="width:10%;">  {{-- spacer agar jarak tengah konsisten --}}
+    <col style="width:45%;">
+  </colgroup>
+  <tbody>
+    <tr>
+      <!-- Kiri -->
+      <td class="text-center">
+          {{ $kop['kota'] ?? 'Kab. Solok' }}, {{ now()->translatedFormat('d F Y') }}
+
+        <div class="sign-role">{{ $kop['pengelola_jabatan'] ?? 'Pengelola Keuangan' }}</div>
+        <div class="sign-space"></div>
+        <div class="sign-name">{{ $kop['pengelola_nama'] ?? 'Nama Pengelola' }}</div>
+        <div class="sign-meta">{{ $kop['pengelola_nip'] ?? 'NIP. —' }}</div>
+      </td>
+
+      <!-- Spacer -->
+      <td></td>
+
+      <!-- Kanan -->
+      <td class="text-center">
+        <div class="sign-role">
+          <br>{{ $kop['mengetahui_label'] ?? 'Mengetahui, Kepala Sekolah' }}
+        </div>
+        <div class="sign-space"></div>
+        <div class="sign-name">{{ $kop['kepala'] ?? '' }}</div>
+        <div class="sign-meta">{{ $kop['nip'] ?? '' }}</div>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 </body>
 </html>

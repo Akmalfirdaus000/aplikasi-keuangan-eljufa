@@ -16,7 +16,7 @@ return new class extends Migration
     $table->string('nama_kelas');
     $table->foreignId('sekolah_id')->constrained('sekolahs')->onDelete('cascade');
     $table->enum('tingkat', ['TK', '1', '2', '3', '4', '5', '6']); // <- tambahkan 'TK'
-    $table->enum('lokal', ['A', 'B', 'C', 'Umum'])->default('Umum');
+              $table->string('lokal', 100)->nullable();
     $table->timestamps();
 });
 

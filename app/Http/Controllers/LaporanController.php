@@ -144,7 +144,7 @@ public function exportExcel(Request $request)
         }
     };
 
-    $filename = 'laporan-per-kategori-' . now()->format('Ymd_His') . '.xlsx';
+    $filename = 'laporan-keuangan-' . now()->format('Ymd_His') . '.xlsx';
     return Excel::download($export, $filename);
 }
 
@@ -175,7 +175,7 @@ public function exportPdf(Request $request)
         'generated_at' => now()->format('Y-m-d H:i:s'),
     ])->setPaper('a4', 'landscape');
 
-    $filename = 'laporan-per-kategori-' . now()->format('Ymd_His') . '.pdf';
+    $filename = 'laporan-keuangan-' . now()->format('Ymd_His') . '.pdf';
     return $pdf->download($filename);
 }
 
