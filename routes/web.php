@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PengeluaranControler;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SekolahController;
@@ -142,6 +143,28 @@ Route::get('/laporan/per-kategori', [LaporanController::class, 'index'])
     ->name('laporan.perkategori.index');
     Route::get('/laporan/export-excel', [LaporanController::class, 'exportExcel'])->name('laporan.export.excel');
 Route::get('/laporan/export-pdf',   [LaporanController::class, 'exportPdf'])->name('laporan.export.pdf');
+
+
+// keuangan route
+// routes/web.php
+Route::middleware(['auth'])->group(function () {
+    Route::get('/keuangan', [\App\Http\Controllers\KeuanganControler::class,'index'])
+        ->name('keuangan.index');
+    Route::post('/keuangan/uang-masuk', [\App\Http\Controllers\KeuanganControler::class,'store'])
+        ->name('keuangan.uangmasuk.store');
+    Route::delete('/keuangan/uang-masuk/{kasMasuk}', [\App\Http\Controllers\KeuanganControler::class,'destroy'])
+        ->name('keuangan.uangmasuk.destroy');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/pengeluaran',            [PengeluaranControler::class, 'index'])->name('keuangans.pengeluaran');
+    Route::post('/pengeluaran',           [PengeluaranControler::class, 'store'])->name('pengeluaran.store');
+    Route::get('/pengeluaran/{pengeluaran}', [PengeluaranControler::class, 'show'])->name('pengeluaran.show');
+    Route::put('/pengeluaran/{pengeluaran}', [PengeluaranControler::class, 'update'])->name('pengeluaran.update');
+    Route::patch('/pengeluaran/{pengeluaran}', [PengeluaranControler::class, 'update']);
+    Route::delete('/pengeluaran/{pengeluaran}', [PengeluaranControler::class, 'destroy'])->name('pengeluaran.destroy');
+});
+
 
 
 require __DIR__.'/auth.php';
