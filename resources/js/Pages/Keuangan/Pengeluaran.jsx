@@ -141,7 +141,8 @@ export default function PengeluaranIndex() {
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogTrigger asChild>
                     {/* tombol tambah akan nonaktif kalau belum ada saldo kategori terpilih */}
-                    <Button variant="outline" disabled={saldoKategori <= 0 || !kategoriKasId}>+ Tambah</Button>
+                    {/* <Button variant="outline" disabled={saldoKategori <= 0 || !kategoriKasId}>+ Tambah</Button> */}
+                    <Button variant="outline" >+ Tambah</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -188,6 +189,7 @@ export default function PengeluaranIndex() {
                         <Label>Nominal</Label>
                         <Input
                           inputMode="numeric"
+                          
                           value={nominalStr}
                           onChange={onChangeNominal}
                           placeholder="0"
