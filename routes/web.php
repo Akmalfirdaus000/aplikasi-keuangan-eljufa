@@ -165,6 +165,11 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/pengeluaran/{pengeluaran}', [PengeluaranControler::class, 'destroy'])->name('pengeluaran.destroy');
 });
 
-
+Route::get('/laporan/pengeluaran', [LaporanController::class, 'pengeluaranIndex'])
+    ->name('laporan.pengeluaran');
+Route::get('/laporan/pengeluaran/export/excel', [LaporanController::class, 'pengeluaranExportExcel'])
+    ->name('laporan.pengeluaran.export.excel');
+Route::get('/laporan/pengeluaran/export/pdf', [LaporanController::class, 'pengeluaranExportPdf'])
+    ->name('laporan.pengeluaran.export.pdf');
 
 require __DIR__.'/auth.php';

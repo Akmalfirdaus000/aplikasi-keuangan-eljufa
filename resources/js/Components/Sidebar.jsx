@@ -100,8 +100,15 @@ export default function Sidebar() {
         ],
       },
       
-      { name: "Keuangan", icon: CircleDollarSignIcon, route: "keuangans.pengeluaran" },
-      { name: "Laporan", icon: FileText, route: "laporan.index" },
+      { name: "Pengeluaran Keuangan", icon: CircleDollarSignIcon, route: "keuangans.pengeluaran" },
+       {
+        name: "Laporan",
+        icon: FileText,
+        subMenu: [
+          { name: "Uang Masuk", icon:  BanknoteArrowUpIcon, route: "laporan.index" },
+          { name: "Uang Keluar", icon:  BanknoteArrowDownIcon, route: "laporan.pengeluaran" },
+        ],
+      },
     ],
     []
   );
