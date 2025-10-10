@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm, usePage, router } from "@inertiajs/react"
+import { useForm, usePage, router,Head } from "@inertiajs/react"
 import { route } from "ziggy-js"
 import { useToast } from "@/hooks/use-toast" // ✅ pakai dari hooks
 
@@ -81,6 +81,7 @@ const onDelete = (id) => {
           <p className="text-sm text-muted-foreground">Kelola data siswa berdasarkan sekolah, kelas, dan lokal.</p>
         </div>
       }>
+        <Head title="Sekolah"/>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-balance">Master Data Sekolah</CardTitle>

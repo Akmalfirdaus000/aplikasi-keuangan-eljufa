@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@example.com'],
             [
-                'name' => 'Administrator ',
+                'name' => 'Admin | Elvira Diana ',
                 'password' => Hash::make('qwerty_eljufa'),
             ]
         );

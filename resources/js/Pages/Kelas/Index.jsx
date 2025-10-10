@@ -19,6 +19,7 @@ import {
   PaginationNext,
 } from "@/components/ui/pagination"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Head } from "@inertiajs/react"
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import { useToast } from "@/hooks/use-toast"
@@ -162,6 +163,7 @@ export default function KelasIndex() {
           <p className="text-sm text-muted-foreground">Kelola data siswa berdasarkan sekolah, kelas, dan lokal.</p>
         </div>
       }>
+        <Head title="Kelas"/>
       <main className="p-4 md:p-6">
         <Card>
           <CardHeader className="flex flex-col gap-3">

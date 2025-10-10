@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { usePage, router } from "@inertiajs/react";
+import { usePage, router,Head } from "@inertiajs/react";
 import { route } from "ziggy-js";
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
@@ -241,6 +241,7 @@ export default function LaporanPerKategoriIndex() {
         </div>
       }
     >
+      <Head title="Laporan Keuagan"/>
       <FiltersCardKategori
         sekolahList={sekolahList}
         kategoriList={kategoriList}

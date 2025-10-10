@@ -1,5 +1,5 @@
 "use client";
-import { router } from "@inertiajs/react";
+import { router, Head } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -56,8 +56,7 @@ export default function StudentDetail({ siswa, pembayarans }) {
     );
     const totalPembayaran = siswa.tagihans?.reduce(
         (sum, t) =>
-            sum +
-            (Number(t.total_tagihan || 0) - Number(t.sisa_tagihan || 0)),
+            sum + (Number(t.total_tagihan || 0) - Number(t.sisa_tagihan || 0)),
         0
     );
     const totalSisa = siswa.tagihans?.reduce(
@@ -97,15 +96,16 @@ export default function StudentDetail({ siswa, pembayarans }) {
 
     return (
         <AuthenticatedLayout>
+            <Head title="Detail Siswa" />
             <div className="mx-auto max-w-6xl p-6 space-y-6">
                 {/* Data Siswa */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Detail Siswa</CardTitle>
+                        <CardTitle>Detail Siswaaaaaaaaaaaaa</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <p>
-                            <span className="font-semibold">Nama:</span>{" "}
+                            <span className="font-semibold">Namaaaaaaaaaaaaa:</span>{" "}
                             {siswa.nama_siswa}
                         </p>
                         <p>
@@ -139,7 +139,10 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                         pembayaran.
                                     </DialogDescription>
                                 </DialogHeader>
-                                <form onSubmit={handleSubmit} className="space-y-4">
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="space-y-4"
+                                >
                                     <div className="space-y-2">
                                         <Label>Kategori</Label>
                                         <Select
@@ -151,16 +154,22 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                             <SelectContent>
                                                 {siswa.tagihans
                                                     ?.filter(
-                                                        (t) => t.status !== "lunas"
+                                                        (t) =>
+                                                            t.status !== "lunas"
                                                     )
                                                     .map((t) => (
                                                         <SelectItem
                                                             key={t.id}
                                                             value={String(t.id)}
                                                         >
-                                                            {t.kategori?.nama_kategori} (
+                                                            {
+                                                                t.kategori
+                                                                    ?.nama_kategori
+                                                            }{" "}
+                                                            (
                                                             {fmtID.format(
-                                                                t.sisa_tagihan || 0
+                                                                t.sisa_tagihan ||
+                                                                    0
                                                             )}
                                                             )
                                                         </SelectItem>
@@ -171,15 +180,42 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                     <div className="space-y-2">
                                         <Label>Nominal</Label>
                                         <Input
-                                            type="number"
-                                            value={nominal}
-                                            onChange={(e) =>
-                                                setNominal(e.target.value)
-                                            }
-                                            placeholder="Masukkan jumlah pembayaran"
+                                            inputMode="numeric"
+                                            value={nominalStr}
+                                            onChange={(e) => {
+                                                const raw =
+                                                    e.target.value || "";
+                                                // Ambil digit saja
+                                                const digits = raw.replace(
+                                                    /\D/g,
+                                                    ""
+                                                );
+                                                const val = digits
+                                                    ? parseInt(digits, 10)
+                                                    : 0;
+
+                                                setNominalNum(val);
+                                                // Format angka jadi 1.000.000
+                                                setNominalStr(
+                                                    val > 0
+                                                        ? val.toLocaleString(
+                                                              "id-ID"
+                                                          )
+                                                        : ""
+                                                );
+                                            }}
+                                            placeholder="Contoh: 1.000.000"
                                             required
                                         />
+                                        <p className="text-xs text-muted-foreground">
+                                            {nominalNum > 0
+                                                ? `= Rp ${nominalNum.toLocaleString(
+                                                      "id-ID"
+                                                  )}`
+                                                : "Masukkan nominal pembayaran"}
+                                        </p>
                                     </div>
+
                                     <Button
                                         type="submit"
                                         disabled={!selectedTagihan || !nominal}
@@ -197,8 +233,12 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                     <TableRow>
                                         <TableHead>Kategori</TableHead>
                                         <TableHead>Deskripsi</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
-                                        <TableHead className="text-right">Sisa</TableHead>
+                                        <TableHead className="text-right">
+                                            Total
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                            Sisa
+                                        </TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -207,14 +247,25 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                         siswa.tagihans.map((t) => (
                                             <TableRow key={t.id}>
                                                 <TableCell>
-                                                    {t.kategori?.nama_kategori || "-"}
+                                                    {t.kategori
+                                                        ?.nama_kategori || "-"}
                                                 </TableCell>
-                                                <TableCell>{t.deskripsi || "-"}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {fmtID.format(Number(t.total_tagihan) || 0)}
+                                                <TableCell>
+                                                    {t.deskripsi || "-"}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {fmtID.format(Number(t.sisa_tagihan) || 0)}
+                                                    {fmtID.format(
+                                                        Number(
+                                                            t.total_tagihan
+                                                        ) || 0
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {fmtID.format(
+                                                        Number(
+                                                            t.sisa_tagihan
+                                                        ) || 0
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {t.status === "lunas" ? (
@@ -255,19 +306,25 @@ export default function StudentDetail({ siswa, pembayarans }) {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-500">Jumlah Semua Tagihan</p>
+                            <p className="text-sm text-gray-500">
+                                Jumlah Semua Tagihan
+                            </p>
                             <p className="text-lg font-semibold text-gray-800">
                                 {fmtID.format(totalTagihan)}
                             </p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-500">Total Pembayaran</p>
+                            <p className="text-sm text-gray-500">
+                                Total Pembayaran
+                            </p>
                             <p className="text-lg font-semibold text-green-600">
                                 {fmtID.format(totalPembayaran)}
                             </p>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-500">Total Tunggakan</p>
+                            <p className="text-sm text-gray-500">
+                                Total Tunggakan
+                            </p>
                             <p className="text-lg font-semibold text-red-600">
                                 {fmtID.format(totalSisa)}
                             </p>
@@ -275,7 +332,9 @@ export default function StudentDetail({ siswa, pembayarans }) {
                         <div className="p-4 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-500">Status</p>
                             <p className="text-lg font-semibold text-blue-600">
-                                {totalSisa === 0 ? "Lunas Semua" : "Masih Ada Tagihan"}
+                                {totalSisa === 0
+                                    ? "Lunas Semua"
+                                    : "Masih Ada Tagihan"}
                             </p>
                         </div>
                     </CardContent>
@@ -299,10 +358,17 @@ export default function StudentDetail({ siswa, pembayarans }) {
                                 {pembayarans?.length > 0 ? (
                                     pembayarans.map((p) => (
                                         <TableRow key={p.id}>
-                                            <TableCell>{p.created_at}</TableCell>
-                                            <TableCell>{fmtID.format(p.nominal)}</TableCell>
                                             <TableCell>
-                                                {p.tagihan?.kategori?.nama_kategori}
+                                                {p.created_at}
+                                            </TableCell>
+                                            <TableCell>
+                                                {fmtID.format(p.nominal)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    p.tagihan?.kategori
+                                                        ?.nama_kategori
+                                                }
                                             </TableCell>
                                         </TableRow>
                                     ))

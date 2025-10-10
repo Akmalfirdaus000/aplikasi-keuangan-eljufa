@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { usePage, router } from "@inertiajs/react"
+import { usePage, router,Head } from "@inertiajs/react"
 import { route } from "ziggy-js"
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
@@ -53,6 +53,7 @@ export default function PembayaranIndex() {
         <p className="text-sm text-muted-foreground">Filter berdasarkan tanggal & nama siswa.</p>
       </div>}
     >
+      <Head title="Riwayat Pembayaran"/>
       <div className="grid gap-4">
         {/* Filter Bar */}
         <Card>

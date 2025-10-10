@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast" // pastikan hook toast sudah ada
+import { Head } from "@inertiajs/react"
 
 export default function KategoriIndex() {
   const { kategoriList } = usePage().props
@@ -83,7 +84,7 @@ export default function KategoriIndex() {
           <p className="text-sm text-muted-foreground">Kelola data kategori keuangan.</p>
         </div>
       }>
-          {/* <Head title="Kategoris" /> */}
+          <Head title="Kategoris" />
 
       <main className="p-4 md:p-6">
         

@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react"
 import { usePage, router } from "@inertiajs/react"
+import { Head } from "@inertiajs/react"
+
 import { useToast } from "@/hooks/use-toast"
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"
 import {
@@ -253,13 +255,16 @@ export default function Index() {
 
   return (
     <AuthenticatedLayout
-      header={
-        <div className="flex flex-col gap-1">
+    
+    header={
+      <div className="flex flex-col gap-1">
           <h1 className="text-xl font-bold">Tagihan</h1>
           <p className="text-sm text-muted-foreground">Kelola tagihan per siswa berdasarkan kategori.</p>
         </div>
       }
-    >
+      >
+      <Head title="Tagihan" />
+
       {/* Toolbar */}
       <Card className="mb-4">
         <CardHeader className="pb-2">

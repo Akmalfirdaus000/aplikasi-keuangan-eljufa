@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useForm, usePage, router } from "@inertiajs/react"
+import { useForm, usePage, router, Head } from "@inertiajs/react"
 import { route } from "ziggy-js"
 import { useToast } from "@/hooks/use-toast"
 
@@ -285,6 +285,7 @@ export default function SiswaIndex() {
         </div>
       }
     >
+      <Head title="Siswa"/>
       {/* Toolbar & Trigger Modal */}
       <Card className="mb-4">
         <CardHeader className="pb-2">
