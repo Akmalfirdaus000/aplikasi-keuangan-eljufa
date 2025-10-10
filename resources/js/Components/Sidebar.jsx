@@ -27,37 +27,28 @@ import {
   FileText,
   Users,
   LogOut,
-  Bell,
-  CreditCard as Billing,
   User as UserIcon,
-  Star,
   Menu as MenuIcon,
   ChevronLeft,
   ChevronRight,
   CircleDollarSignIcon,
-  BanknoteArrowUpIcon,
-  BanknoteArrowDownIcon
+  // jika icon di bawah tidak ada di lucide-react, ganti dengan ArrowUpRight/ArrowDownRight
+  // BanknoteArrowUpIcon,
+  // BanknoteArrowDownIcon,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 
-
-function cx(...c) {
-  return c.filter(Boolean).join(" ");
-}
+function cx(...c) { return c.filter(Boolean).join(" "); }
 function isRouteActive(url, routeName) {
-  try {
-    return url.includes(route(routeName, [], false));
-  } catch {
-    return false;
-  }
+  try { return url.includes(route(routeName, [], false)); } catch { return false; }
 }
 
 export default function Sidebar() {
-  const page = usePage();
-  const url = page?.url || "";
-  const auth = page?.props?.auth || {};
-  const user = auth?.user ?? { name: "Guest", email: "guest@example.com" };
+  const { url, props } = usePage();
+  const user = props?.auth?.user ?? { name: "Guest", email: "guest@example.com" };
 
-  // Collapse desktop + sink ke CSS var agar layout bisa menyesuaikan (jika dipakai)
+  // ===== Desktop collapse
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
@@ -70,56 +61,68 @@ export default function Sidebar() {
     document.documentElement.style.setProperty("--sbw", collapsed ? "4rem" : "16rem");
   }, [collapsed]);
 
-  // Sheet (mobile)
+  // ===== Mobile sheet
   const [openMobile, setOpenMobile] = useState(false);
+  // cegah body scroll saat sheet open (nice UX)
+  useEffect(() => {
+    if (openMobile) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => (document.body.style.overflow = "");
+  }, [openMobile]);
 
-  // Submenu open map
+  // ===== Submenu state
   const [openMenus, setOpenMenus] = useState({});
   const toggleMenu = (name) => setOpenMenus((p) => ({ ...p, [name]: !p[name] }));
 
-  // Menus
-  const menus = useMemo(
-    () => [
-      { name: "Dashboard", icon: Home, route: "dashboard" },
-      {
-        name: "Master Data",
-        icon: Settings,
-        subMenu: [
-          { name: "Sekolah", icon: Layers, route: "sekolahs.index" },
-          { name: "Siswa", icon: Users, route: "siswas.index" },
-          { name: "Kelas", icon: Book, route: "kelas.index" },
-          { name: "Kategori", icon: FileText, route: "kategoris.index" },
-        ],
-      },
-      {
-        name: "Transaksi",
-        icon: Banknote,
-        subMenu: [
-          { name: "Tagihan", icon:  Banknote, route: "tagihans.index" },
-          { name: "Pembayaran", icon:  CreditCard, route: "pembayarans.index" },
-        ],
-      },
-      
-      { name: "Pengeluaran Keuangan", icon: CircleDollarSignIcon, route: "keuangans.pengeluaran" },
-       {
-        name: "Laporan",
-        icon: FileText,
-        subMenu: [
-          { name: "Uang Masuk", icon:  BanknoteArrowUpIcon, route: "laporan.index" },
-          { name: "Uang Keluar", icon:  BanknoteArrowDownIcon, route: "laporan.pengeluaran" },
-        ],
-      },
-    ],
-    []
-  );
+  // buka submenu yang mengandung route aktif saat mount
+  useEffect(() => {
+    menus.forEach((m) => {
+      if (m.subMenu?.some((sm) => isRouteActive(url, sm.route))) {
+        setOpenMenus((p) => ({ ...p, [m.name]: true }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ====== Item renderers (ikon konsisten) ======
+  // ===== Menus
+  const menus = useMemo(() => [
+    { name: "Dashboard", icon: Home, route: "dashboard" },
+    {
+      name: "Master Data",
+      icon: Settings,
+      subMenu: [
+        { name: "Sekolah", icon: Layers, route: "sekolahs.index" },
+        { name: "Siswa", icon: Users, route: "siswas.index" },
+        { name: "Kelas", icon: Book, route: "kelas.index" },
+        { name: "Kategori", icon: FileText, route: "kategoris.index" },
+      ],
+    },
+    {
+      name: "Transaksi",
+      icon: Banknote,
+      subMenu: [
+        { name: "Tagihan", icon: Banknote, route: "tagihans.index" },
+        { name: "Pembayaran", icon: CreditCard, route: "pembayarans.index" },
+      ],
+    },
+    { name: "Pengeluaran Keuangan", icon: CircleDollarSignIcon, route: "keuangans.pengeluaran" },
+    {
+      name: "Laporan",
+      icon: FileText,
+      subMenu: [
+        { name: "Uang Masuk", icon: ArrowUpRight, route: "laporan.index" },
+        { name: "Uang Keluar", icon: ArrowDownRight, route: "laporan.pengeluaran" }, // <- pastikan nama persis dengan routes.php
+      ],
+    },
+  ], []);
+
+  // ===== Item renderers
   const IconBox = ({ Icon, className }) => <Icon className={cx("h-5 w-5 shrink-0", className)} />;
 
   const MenuItem = ({ icon: Icon, active, children, collapsed }) => (
     <div
       className={cx(
-        "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
+        "flex items-center rounded-md px-3 py-3 text-sm transition-colors",
         active ? "bg-indigo-100 text-indigo-700 font-medium" : "text-gray-700 hover:bg-indigo-50",
         collapsed ? "justify-center gap-0" : "gap-3"
       )}
@@ -133,7 +136,7 @@ export default function Sidebar() {
   const SubItem = ({ icon: Icon, active, children }) => (
     <div
       className={cx(
-        "flex items-center rounded-md px-3 py-2 text-sm gap-3",
+        "flex items-center rounded-md px-3 py-2.5 text-sm gap-3",
         active ? "bg-indigo-100 text-indigo-700 font-medium" : "text-gray-600 hover:bg-indigo-50"
       )}
     >
@@ -142,13 +145,15 @@ export default function Sidebar() {
     </div>
   );
 
+  // helper: close sheet saat klik link di mobile
+  const closeMobile = () => setOpenMobile(false);
+
   const renderTree = (isMobile = false) => (
     <ScrollArea className="h-[calc(100vh-140px)]">
       <nav className={cx("p-2 space-y-1", collapsed && !isMobile && "px-1")}>
         {menus.map((m, i) => {
           const Icon = m.icon;
 
-          // Single item
           if (!m.subMenu) {
             const active = isRouteActive(url, m.route);
             const item = (
@@ -158,12 +163,17 @@ export default function Sidebar() {
             );
             return (
               <div key={i}>
-                <Link href={route(m.route)}>{item}</Link>
+                <Link
+                  href={route(m.route)}
+                  onClick={isMobile ? closeMobile : undefined}
+                  className="block"
+                >
+                  {item}
+                </Link>
               </div>
             );
           }
 
-          // Dengan submenu
           const open = !!openMenus[m.name];
           const showCaret = !(collapsed && !isMobile);
 
@@ -173,7 +183,7 @@ export default function Sidebar() {
                 type="button"
                 onClick={() => toggleMenu(m.name)}
                 className={cx(
-                  "flex items-center w-full rounded-md px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-indigo-50 transition-colors",
+                  "flex items-center w-full rounded-md px-3 py-3 text-sm font-semibold text-gray-600 hover:bg-indigo-50 transition-colors",
                   collapsed && !isMobile ? "justify-center gap-0" : "justify-between gap-3"
                 )}
                 title={collapsed && !isMobile ? m.name : undefined}
@@ -196,7 +206,12 @@ export default function Sidebar() {
                       </SubItem>
                     );
                     return sm.route ? (
-                      <Link key={j} href={route(sm.route)}>
+                      <Link
+                        key={j}
+                        href={route(sm.route)}
+                        onClick={isMobile ? closeMobile : undefined}
+                        className="block"
+                      >
                         {node}
                       </Link>
                     ) : (
@@ -212,7 +227,7 @@ export default function Sidebar() {
     </ScrollArea>
   );
 
-  // ====== User dropdown (MEMAKAI user login) ======
+  // ===== User dropdown
   const onLogout = () => router.post(route("logout"));
   const onProfile = () => router.get(route("profile.edit"));
 
@@ -232,12 +247,7 @@ export default function Sidebar() {
           )}
           title={collapsed ? displayName : undefined}
         >
-          <img
-            src={avatar}
-            alt={displayName}
-            className="w-8 h-8 rounded-full shrink-0"
-            referrerPolicy="no-referrer"
-          />
+          <img src={avatar} alt={displayName} className="w-8 h-8 rounded-full shrink-0" referrerPolicy="no-referrer" />
           {!collapsed && (
             <>
               <div className="flex flex-col text-left min-w-0">
@@ -250,8 +260,7 @@ export default function Sidebar() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        {/* Item informatif/akun (opsional) */}
-        <DropdownMenuItem className="gap-2" onSelect={onProfile} >
+        <DropdownMenuItem className="gap-2" onSelect={onProfile}>
           <UserIcon size={16} /> Profil
         </DropdownMenuItem>
         <DropdownMenuItem className="gap-2">
@@ -277,27 +286,37 @@ export default function Sidebar() {
                   <MenuIcon className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72">
+              <SheetContent side="left" className="p-0 w-[85vw] max-w-[320px]">
                 <SheetHeader className="px-4 py-3 border-b">
-                  <SheetTitle>Aplikasi Keuangan</SheetTitle>
-
+                  <div className="flex items-center mx-auto gap-3">
+                    {/* <img src="/logo-kop-eljufa.png" alt="Logo" className="h-10 w-auto" /> */}
+                    <div className="leading-tight">
+                      <SheetTitle className="text-base">Aplikasi Keuangan</SheetTitle>
+                      <div className="text-[11px] text-gray-500">Yayasan El-jufa</div>
+                    </div>
+                  </div>
                 </SheetHeader>
+
                 {renderTree(true)}
+
                 <div className="p-3 border-t">
                   <UserDropdown />
                   <Button
                     variant="ghost"
                     className="mt-2 w-full justify-start gap-3 text-red-600"
-                    onClick={onLogout}
+                    onClick={() => { closeMobile(); onLogout(); }}
                   >
                     <LogOut className="h-5 w-5" /> Keluar
                   </Button>
                 </div>
               </SheetContent>
             </Sheet>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold text-indigo-600">Aplikasi Keuangan</span>
-              <span className="text-xs text-gray-500">Yayasan El-jufa</span>
+            <div className="flex items-center gap-2 ">
+              <img src="/logo-kop-eljufa.png" alt="Logo" className="h-16 w-auto" />
+              <div className="flex flex-col leading-tight ">
+                <span className="text-sm font-semibold text-indigo-600">Aplikasi Keuangan</span>
+                <span className="text-xs text-gray-500">Yayasan El-jufa</span>
+              </div>
             </div>
           </div>
         </div>
@@ -314,11 +333,11 @@ export default function Sidebar() {
           {/* Header */}
           <div className={cx("flex items-center border-b", collapsed ? "px-2 py-3" : "px-4 py-3")}>
             {!collapsed ? (
-              <div className="mr-2 flex items-center">
-                <img src="/logo-kop-eljufa.png" alt="" className="w-24 h-24" />
+              <div className="mr-2 flex items-center gap-3">
+                <img src="/logo-kop-eljufa.png" alt="Logo" className="h-10 w-auto" />
                 <div className="flex flex-col">
-                <span className="  text-xl font-bold text-indigo-600">Aplikasi Keuangan</span>
-                <span className="text-[11px] text-gray-500">Yayasan El-jufa</span>
+                  <span className="text-base font-bold text-indigo-600">Aplikasi Keuangan</span>
+                  <span className="text-[11px] text-gray-500">Yayasan El-jufa</span>
                 </div>
               </div>
             ) : (
@@ -328,8 +347,8 @@ export default function Sidebar() {
               size="icon"
               variant="ghost"
               className={cx("ml-auto", collapsed && "mx-auto")}
-              onClick={() => setCollapsed((v) => !v)}
-              aria-label="Collapse sidebar"
+              onClick={() => setCollapsed(v => !v)}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={collapsed ? "Expand" : "Collapse"}
             >
               {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Tagihan;
+use Inertia\Inertia;
 use App\Models\Siswa;
+use App\Models\Tagihan;
 use App\Models\Kategori;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class TagihanController extends Controller
 {
@@ -131,17 +132,58 @@ public function index()
     //     $tagihan->delete();
     //     return response()->json(['message' => 'Tagihan berhasil dihapus']);
     // }
-        public function destroy($id)
-    {
-        try {
-            $tagihan = Tagihan::findOrFail($id);
-            $tagihan->delete();
+      public function destroy($id)
+{
+    try {
+        DB::transaction(function () use ($id) {
+            // 🔹 1. Ambil tagihan + pembayaran terkait
+            $tagihan = Tagihan::with('pembayarans')->findOrFail($id);
 
-            return redirect()->route('tagihans.index')
-                ->with('success', 'Siswa berhasil dihapus');
-        } catch (\Exception $e) {
-            return redirect()->route('tagihans.index')
-                ->with('error', 'Gagal menghapus siswa: ' . $e->getMessage());
-        }
+            foreach ($tagihan->pembayarans as $pb) {
+                $kategoriId = $tagihan->kategori_id;
+                $nominal    = (int) $pb->nominal;
+
+                // 🔹 2. Lock saldo kategori
+                $saldo = \App\Models\KasSaldo::where('kategori_id', $kategoriId)->lockForUpdate()->first();
+                if ($saldo) {
+                    $saldoSebelum = (int) $saldo->saldo;
+                    $saldoSetelah = $saldoSebelum - $nominal;
+
+                    // 🔹 3. Catat reversal di kas_mutasis
+                    \App\Models\KasMutasi::create([
+                        'tanggal'        => now(),
+                        'tipe'           => 'kredit', // uang keluar (reversal)
+                        'kategori_id'    => $kategoriId,
+                        'ref_type'       => 'pembayaran_void',
+                        'ref_id'         => $pb->id,
+                        'keterangan'     => 'Reversal pembayaran karena Tagihan dihapus',
+                        'metode'         => $pb->metode ?? '-',
+                        'kredit'         => $nominal,
+                        'debit'          => 0,
+                        'saldo_sebelum'  => $saldoSebelum,
+                        'saldo_setelah'  => $saldoSetelah,
+                        'user_id'        => auth()->id(),
+                    ]);
+
+                    // 🔹 4. Update saldo cache
+                    $saldo->saldo = $saldoSetelah;
+                    $saldo->save();
+                }
+
+                // 🔹 5. Hapus pembayaran (boleh pakai delete() agar event terpicu)
+                $pb->delete();
+            }
+
+            // 🔹 6. Hapus tagihan setelah semua pembayaran diproses
+            $tagihan->delete();
+        });
+
+        return redirect()->route('tagihans.index')
+            ->with('success', 'Tagihan + pembayaran terkait berhasil dihapus & saldo diperbarui.');
+    } catch (\Exception $e) {
+        return redirect()->route('tagihans.index')
+            ->with('error', 'Gagal menghapus tagihan: ' . $e->getMessage());
     }
+}
+
 }
