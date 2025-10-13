@@ -529,9 +529,9 @@ export default function Index() {
                                   {tagihan.status === "belum_lunas" ? "Belum Lunas" : "Lunas"}
                                 </div>
                                 <div className="flex gap-2 pt-1">
-                                  <Button size="sm" variant="outline" onClick={() => handleEdit(tagihan)}>
+                                  {/* <Button size="sm" variant="outline" onClick={() => handleEdit(tagihan)}>
                                     Edit
-                                  </Button>
+                                  </Button> */}
                                   <Button size="sm" variant="destructive" onClick={() => handleDelete(tagihan.id)}>
                                     Hapus
                                   </Button>
